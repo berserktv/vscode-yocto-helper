@@ -48,6 +48,12 @@ start_cmd_docker() {
     cd $curdir
 }
 
+start_session_docker() {
+    local curdir=$(pwd)
+    cd $DOCKER_DIR
+    make run
+    cd $curdir
+}
 
 find_name_image() {
     IFS=$' '
