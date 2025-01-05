@@ -41,4 +41,4 @@ RUN chown -R user:user /home/user
 # Примечание: для подключения к работающему контейнеру под root (hash см. docker ps)
 # docker exec -u 0 -it hash_container bash
 USER user
-ENTRYPOINT /bin/bash
+ENTRYPOINT ["sh", "-c", "cd /mnt/docker/ubuntu_18_04 && ./shell.sh"]

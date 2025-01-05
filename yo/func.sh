@@ -33,7 +33,7 @@ start_cmd_docker() {
 
     local cmd_args=$1
     local curdir=$(pwd)
-    cd $ROOT_DIR
+    cd $DOCKER_DIR
     if ! find_docker_id; then
         make run_detach
         if ! find_docker_id; then
