@@ -12,7 +12,10 @@ run:
 	-v $(shell readlink -f ${SSH_AUTH_SOCK}):/ssh-agent -e SSH_AUTH_SOCK=/ssh-agent \
 	--cap-add=cap_sys_admin --cap-add=cap_net_admin --cap-add=cap_net_raw \
 	--mount type=bind,source=${SRC}/${ROOTD},target=${PUB} -t -i ${IMAGE}
-	
+
+run_detach:
+	make run -e "DOCKER_ARGS=-d"
+
 build:
 	sudo docker build -f Dockerfile --tag ${IMAGE} ..
 

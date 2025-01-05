@@ -17,6 +17,38 @@ gen_send_ssh_key() {
     ssh-copy-id -i ~/.ssh/${KEY_ID}.pub root@${IP_COMP}
 }    
 
+CONTAINER_ID=""
+CONTAINER_NAME=""
+find_docker_id() {
+    local id=$(docker ps | grep -m1 $CONTAINER_NAME | cut -d" " -f1)
+    if [ -z "$id" ]; then CONTAINER_ID=""; return 1;
+    else CONTAINER_ID=$id; return 0; fi
+}
+
+start_cmd_docker() {
+    if [ -z "$1" ]; then
+        echo "error: start_cmd_docker(), arg1 command name empty ..."
+        return 1;
+    fi
+
+    local cmd_args=$1
+    local curdir=$(pwd)
+    cd $ROOT_DIR
+    if ! find_docker_id; then
+        make run_detach
+        if ! find_docker_id; then
+            echo "failed to start container => make run_detach ..."
+            cd $curdir
+            return 2;
+        fi
+    fi
+
+    echo "docker exec -it ${CONTAINER_ID} bash -c \"$cmd_args\""
+    docker exec -it ${CONTAINER_ID} bash -c "$cmd_args"
+    cd $curdir
+}
+
+
 find_name_image() {
     IFS=$' '
     if [ -z "$YO_M" ]; then echo "MACHINE variable not found"; return -1; fi
