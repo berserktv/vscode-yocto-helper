@@ -2,26 +2,38 @@
 
 # корневой каталог yocto, где будет располагаться каталог build, относительно текущего каталога
 YO_R="../.."
+find_setup_env() {
+    if [ -f "${YO_R}/setup-environment" ]; then return 0; fi
+    local tmp_path=".."
+    for i in {1..7}; do
+        if [ -f "${tmp_path}/setup-environment" ]; then
+            YO_R="${tmp_path}"
+            return 0;
+        fi
+        tmp_path="${tmp_path}/.."
+    done
+    echo "error: 'setup-environment' not found in parent directories, env: 'YO_R' wrong path ..."; return 1
+}
+find_setup_env
+
 YO_M=`cat $YO_R/build/conf/local.conf | grep "^MACHINE " | cut -d"'" -f2`
 YO_DIR_IMAGE="$YO_R/build/tmp/deploy/images"
 YO_IMAGE_NAME=""
 YO_EXT=".wic .rootfs.wic .rpi-sdimg .wic.bz2"
 LI_DISK=""
-
-# общие функции для работы с IDE vscode
 IP_COMP="192.168.0.1"
 USER_COMP="user"
 KEY_ID="computer_id_rsa"
+CONTAINER_ID=""
+CONTAINER_NAME=""
+DOCKER_DIR=""
+
+# общие функции для работы с IDE vscode
 gen_send_ssh_key() {
     ssh-keygen -t rsa -q -N '' -f ~/.ssh/${KEY_ID}
     ssh-copy-id -i ~/.ssh/${KEY_ID}.pub ${USER_COMP}@${IP_COMP}
-    ##if [ "$1" == "manual" ]; then # manual copy pub key
-    ##    scp ~/.ssh/${KEY_ID}.pub ${USER_COMP}@${IP_COMP}:/home/${USER_COMP}/.ssh/authorized_keys
-    ##fi    
 }
 
-CONTAINER_ID=""
-CONTAINER_NAME=""
 find_docker_id() {
     local id=$(docker ps | grep -m1 $CONTAINER_NAME | cut -d" " -f1)
     if [ -z "$id" ]; then CONTAINER_ID=""; return 1;
@@ -146,7 +158,7 @@ sdcard_deploy() {
     fi
 }
 
-ALGORITMS="HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
+#ALGORITMS="HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
 ssh_config_add_negotiate() {
     if [ -z "$1" ]; then echo "error: ssh_config_add_negotiate(), arg1 IP address ..."; return 1; fi
     if ! cat ~/.ssh/config | grep -q "$1"; then
