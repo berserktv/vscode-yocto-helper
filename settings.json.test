@@ -27,7 +27,7 @@
                 "name": "SendSshKey",
                 "singleInstance": true,
                 "color": "#007fff",
-                "command": "source .vscode/yo/func.sh; gen_send_ssh_key",
+                "command": "cd .vscode/yo; source func.sh; IP_COMP=192.168.0.1 USER_COMP=user; gen_send_ssh_key",
             },
             {
                 "name": "sshfsInstall",

@@ -10,12 +10,15 @@ LI_DISK=""
 
 # общие функции для работы с IDE vscode
 IP_COMP="192.168.0.1"
-USER_COMP="root"
+USER_COMP="user"
 KEY_ID="computer_id_rsa"
 gen_send_ssh_key() {
     ssh-keygen -t rsa -q -N '' -f ~/.ssh/${KEY_ID}
-    ssh-copy-id -i ~/.ssh/${KEY_ID}.pub root@${IP_COMP}
-}    
+    ssh-copy-id -i ~/.ssh/${KEY_ID}.pub ${USER_COMP}@${IP_COMP}
+    ##if [ "$1" == "manual" ]; then # manual copy pub key
+    ##    scp ~/.ssh/${KEY_ID}.pub ${USER_COMP}@${IP_COMP}:/home/${USER_COMP}/.ssh/authorized_keys
+    ##fi    
+}
 
 CONTAINER_ID=""
 CONTAINER_NAME=""
@@ -140,5 +143,16 @@ sdcard_deploy() {
     if find_sd_card && find_name_image; then
         cd "${YO_DIR_IMAGE}/${YO_M}"
         select_dd_info
+    fi
+}
+
+ALGORITMS="HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
+ssh_config_add_negotiate() {
+    if [ -z "$1" ]; then echo "error: ssh_config_add_negotiate(), arg1 IP address ..."; return 1; fi
+    if ! cat ~/.ssh/config | grep -q "$1"; then
+        echo "Host $1" >> ~/.ssh/config
+        echo "  User ${USER_COMP}"
+        echo "  HostkeyAlgorithms +ssh-rsa" >> ~/.ssh/config
+        echo "  PubkeyAcceptedAlgorithms +ssh-rsa" >> ~/.ssh/config
     fi
 }

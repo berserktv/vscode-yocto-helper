@@ -33,13 +33,13 @@
                 "name": "core-image-minimal",
                 "singleInstance": true,
                 "color": "#007fff",
-                "command": ".vscode/yo/build_image.sh 'bitbake core-image-minimal'",
+                "command": "cd .vscode/yo; ./build_image.sh 'bitbake core-image-minimal'",
             },
             {
                 "name": "SDcardDeploy",
                 "singleInstance": true,
                 "color": "#007fff",
-                "command": ".vscode/yo/sdcard_deploy.sh",
+                "command": "cd .vscode/yo; ./sdcard_deploy.sh",
             },
             {
                 "name": "Uart",
