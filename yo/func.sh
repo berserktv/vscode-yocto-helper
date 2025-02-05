@@ -158,7 +158,6 @@ sdcard_deploy() {
     fi
 }
 
-#ALGORITMS="HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
 ssh_config_add_negotiate() {
     if [ -z "$1" ]; then echo "error: ssh_config_add_negotiate(), arg1 IP address ..."; return 1; fi
     if ! cat ~/.ssh/config | grep -q "$1"; then
@@ -167,4 +166,34 @@ ssh_config_add_negotiate() {
         echo "  HostkeyAlgorithms +ssh-rsa" >> ~/.ssh/config
         echo "  PubkeyAcceptedAlgorithms +ssh-rsa" >> ~/.ssh/config
     fi
+}
+
+# to run image Raspberrypi3-64 Yocto with SysVinit you need to change variables (not tested under Systemd)
+# SERIAL_CONSOLES = "115200;ttyAMA0"; SERIAL_CONSOLES_CHECK = "ttyAMA0:ttyS0" => /etc/inittab
+start_qemu_rpi3_64() {
+    local curdir=$(pwd)
+    local kernel="Image"
+    local dtb="bcm2837-rpi-3-b.dtb"
+    local image="core-image-minimal-raspberrypi3-64.rpi-sdimg"
+    cd "${YO_DIR_IMAGE}/${YO_M}"
+
+    size_mb=$(( ($(stat -c %s "$image") + 1048575) / 1048576 ))
+    thresholds=(64 128 256 512)
+
+    for threshold in "${thresholds[@]}"; do
+        if [ "$size_mb" -lt "$threshold" ]; then
+            qemu-img resize "${image}" "${threshold}M"
+        fi
+    done
+
+    qemu-system-aarch64 \
+        -m 1G \
+        -M raspi3b \
+        -dtb ${dtb} \
+        -kernel ${kernel} \
+        -serial mon:stdio \
+        -drive file=${image},format=raw,if=sd,readonly=off \
+        -append "console=ttyAMA0,115200 root=/dev/mmcblk0p2 rw earlycon=pl011,0x3f201000" \
+        -nographic
+    cd $curdir
 }
