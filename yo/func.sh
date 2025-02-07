@@ -34,6 +34,31 @@ gen_send_ssh_key() {
     ssh-copy-id -i ~/.ssh/${KEY_ID}.pub ${USER_COMP}@${IP_COMP}
 }
 
+DEEPSEEK_MODEL="deepseek-coder-v2"
+install_deepseek() {
+    # installation requires ~ 12Gb
+    curl -fsSL https://ollama.com/install.sh | sh
+    ollama serve
+    ollama run ${DEEPSEEK_MODEL}
+}
+
+run_deepseek() { ollama run ${DEEPSEEK_MODEL}; }
+
+unistall_ollama() {
+    #Remove the ollama service:
+    sudo systemctl stop ollama
+    sudo systemctl disable ollama
+    sudo rm /etc/systemd/system/ollama.service
+    #Remove the ollama binary from your bin directory:
+    sudo rm $(which ollama)
+    #Remove the downloaded models and Ollama service user and group:
+    sudo rm -r /usr/share/ollama
+    sudo userdel ollama
+    sudo groupdel ollama
+    #Remove installed libraries:
+    sudo rm -rf /usr/local/lib/ollama
+}
+
 find_docker_id() {
     local id=$(docker ps | grep -m1 $CONTAINER_NAME | cut -d" " -f1)
     if [ -z "$id" ]; then CONTAINER_ID=""; return 1;
