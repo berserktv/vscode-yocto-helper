@@ -32,6 +32,8 @@ subnet $IP_SUBNET netmask $IP_MASK {
   $IP_RANGE;
   option routers $IP_ADDR;
   option subnet-mask $IP_MASK;
+  option tftp-server-name "$IP_ADDR";
+  option bootfile-name "bootcode.bin";
 }
 EOF
 )
