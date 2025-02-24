@@ -3,6 +3,7 @@ DOCKER_TAG=buster-slim
 DOCKER_NETWORK="--network=host"
 #TFTP_DIR=${PWD}/tftp
 TFTP_DIR=/tmp/tftp
+NFS_DIR=/tmp/nfs
 
 # Host network config =>
 HOST_NET_IFACE=""
@@ -18,9 +19,13 @@ run:
 	#sudo ip addr add $(IP_ADDR)/$(IP_MASK) dev $(HOST_NET_IFACE)
 	#sudo ip link set $(HOST_NET_IFACE) up
 	
+	lsmod | grep -o nfsd || sudo modprobe nfsd
 	docker run --rm -ti --privileged \
 	${DOCKER_NETWORK} \
 	-v ${TFTP_DIR}:/srv/tftp \
+	-v ${NFS_DIR}:/nfs \
+	-v ${PWD}/etc/exports:/etc/exports \
+	-v ${PWD}/etc/default/nfs-kernel-server:/etc/default/nfs-kernel-server \
 	-v ${PWD}/etc/default/isc-dhcp-server:/etc/default/isc-dhcp-server \
 	-v ${PWD}/etc/dhcp/dhcpd.conf:/etc/dhcp/dhcpd.conf \
 	-v ${PWD}/etc/network/interfaces:/etc/network/interfaces \

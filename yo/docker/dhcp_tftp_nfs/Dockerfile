@@ -7,7 +7,8 @@ RUN apt-get update && \
     apt-get install --no-install-recommends -y \
         isc-dhcp-server \
         tftpd-hpa \
-        procps && \
+        procps \
+        nfs-kernel-server && \
     # Clean rootfs
     apt-get clean all && \
     apt-get autoremove -y && \
