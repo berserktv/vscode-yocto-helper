@@ -27,6 +27,8 @@ KEY_ID="computer_id_rsa"
 CONTAINER_ID=""
 CONTAINER_NAME=""
 DOCKER_DIR=""
+IMAGE_NAME="core-image-minimal-raspberrypi4.rpi-sdimg"
+MOUNT_DIR="${YO_DIR_IMAGE}/tmp_mount"
 
 # общие функции для работы с IDE vscode
 gen_send_ssh_key() {
@@ -221,4 +223,101 @@ start_qemu_rpi3_64() {
         -append "console=ttyAMA0,115200 root=/dev/mmcblk0p2 rw earlycon=pl011,0x3f201000" \
         -nographic
     cd $curdir
+}
+
+MOUNT_BASE_DIR=""
+get_mount_base() {
+    local name_without_ext="${IMAGE_NAME%.*}"
+    MOUNT_BASE_DIR="${MOUNT_DIR}/${name_without_ext}"
+}
+
+mount_raw_image() {
+    find_name_image
+    if [[ -z "${YO_DIR_IMAGE}" || -z "${IMAGE_NAME}" || -z "${MOUNT_DIR}" ]]; then
+        echo "Error: Set environment variables YO_DIR_IMAGE, IMAGE_NAME, and MOUNT_DIR" >&2
+        return 1
+    fi
+
+    local image_file="${YO_DIR_IMAGE}/${IMAGE_NAME}"
+    if [ ! -f "${image_file}" ]; then
+        echo "Error: Image file ${image_file} not found" >&2
+        return 2
+    fi
+
+    local loop_dev=$(losetup -j "${image_file}" | awk -F: '{print $1}')
+    if [ -z "${loop_dev}" ]; then
+        loop_dev=$(sudo losetup -f --show -P "${image_file}")
+        if [[ $? -ne 0 ]]; then echo "Error: Failed to create loop device" >&2; return 3; fi
+        echo "Created new loop device: ${loop_dev}"
+    else
+        echo "Using existing loop device: ${loop_dev}"
+    fi
+
+    local uid=$(id -u)
+    local gid=$(id -g)
+    get_mount_base
+    test -d ${MOUNT_BASE_DIR} || sudo mkdir -p ${MOUNT_BASE_DIR}
+
+    for part_num in {1..4}; do
+        local partition="${loop_dev}p${part_num}"
+        if [[ -b "${partition}" ]]; then
+            local mount_point="${MOUNT_BASE_DIR}/part${part_num}"
+            if mountpoint -q "${mount_point}"; then
+                echo "Partition ${part_num} is already mounted at ${mount_point}, skipping..."
+                continue
+            fi
+
+            sudo mkdir -p "${mount_point}"
+            local fs_type=$(sudo blkid -o value -s TYPE "${partition}")
+            case "${fs_type}" in
+                vfat)
+                    sudo mount -o rw,uid=${uid},gid=${gid} "${partition}" "${mount_point}" ;;
+                *)
+                    sudo mount -o rw "${partition}" "${mount_point}" ;;
+            esac
+
+            if [[ $? -eq 0 ]]; then echo "Partition ${part_num} mounted at ${mount_point}";
+            else echo "Error mounting partition ${part_num}" >&2; fi
+        fi
+    done
+}
+
+umount_raw_image() {
+    if [[ -z "${IMAGE_NAME}" || -z "${MOUNT_DIR}" ]]; then
+        echo "Error: Set environment variables IMAGE_NAME, and MOUNT_DIR, exit ..." >&2; return 1
+    fi
+
+    get_mount_base
+    local name_without_ext="${IMAGE_NAME%.*}"
+    if [ ! -d ${MOUNT_BASE_DIR} ]; then
+        echo "Error: not find ${MOUNT_BASE_DIR}, exit ..." >&2; return 2
+    fi
+
+    local mounted_parts=("${MOUNT_BASE_DIR}"/part*)
+    if [[ -e "${mounted_parts[0]}" ]]; then
+        for mount_point in "${mounted_parts[@]}"; do
+            if mountpoint -q "${mount_point}"; then
+                sudo umount "${mount_point}"
+                if [[ $? -eq 0 ]]; then echo "Successfully unmounted ${mount_point}"
+                else echo "Error: Failed to unmount ${mount_point}" >&2; fi
+            else
+                echo "Warning: ${mount_point} is not mounted" >&2
+            fi
+        done
+    else
+        echo "No mounted partitions found in ${MOUNT_DIR}/${name_without_ext}"
+    fi
+
+    local image_file="${YO_DIR_IMAGE}/${IMAGE_NAME}"
+    if [[ -f "${image_file}" ]]; then
+        local loop_devices
+        loop_devices=$(losetup -j "${image_file}" | awk -F: '{print $1}')
+        for loop_dev in ${loop_devices}; do
+            sudo losetup -d "${loop_dev}"
+            if [[ $? -eq 0 ]]; then echo "Successfully detached loop device ${loop_dev}"
+            else echo "Error: Failed to detach loop device ${loop_dev}" >&2; fi
+        done
+    else
+        echo "Warning: Image file ${image_file} not found, skipping loop device cleanup" >&2
+    fi
 }
