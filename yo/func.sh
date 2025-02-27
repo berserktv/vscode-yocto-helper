@@ -29,6 +29,7 @@ CONTAINER_NAME=""
 DOCKER_DIR=""
 IMAGE_NAME="core-image-minimal-raspberrypi4.rpi-sdimg"
 MOUNT_DIR="${YO_DIR_IMAGE}/tmp_mount"
+DOWNLOAD_DIR="$HOME/distrib"
 
 # общие функции для работы с IDE vscode
 gen_send_ssh_key() {
@@ -321,4 +322,58 @@ umount_raw_image() {
     else
         echo "Warning: Image file ${image_file} not found, skipping loop device cleanup" >&2
     fi
+}
+
+
+download_raspios() {
+    # arg1 - select version
+    test -d "${DOWNLOAD_DIR}/raspios" || mkdir -p "${DOWNLOAD_DIR}/raspios"
+    local url="https://downloads.raspberrypi.com/raspios_arm64/images/"
+    local latest_dir
+    local selected_dir
+
+    local dir_list=$(curl -s "$url" | grep -oP 'raspios_arm64-\d{4}-\d{2}-\d{2}/' | sort -u -r)
+    if [ -z "$1" ]; then
+        latest_dir=$(echo "$dir_list" | head -n 1)
+        echo "Selected the latest available image: $latest_dir"
+        selected_dir="$latest_dir"
+    else
+        echo "Available images:"
+        echo "$dir_list" | nl
+        read -p "Enter the number of the image to download: " choice
+        selected_dir=$(echo "$dir_list" | sed -n "${choice}p")
+        if [ -z "$selected_dir" ]; then
+            echo "Error: Invalid selection."
+            return 1
+        fi
+    fi
+
+    local selected_file=$(curl -s "${url}${selected_dir}" | grep -oP 'href="\K[^"]+\.img\.xz' | sort -u | head -n 1)
+    if [ -z "$selected_file" ]; then
+        echo "Error: No image file (.img.xz) found in the directory."
+        return 2
+    fi
+
+    local extracted_file="${selected_file%.xz}"
+    if [ -f "${DOWNLOAD_DIR}/raspios/${extracted_file}" ]; then
+        echo "File already exists: ${DOWNLOAD_DIR}/raspios/${extracted_file}, skipping ..."; return
+    fi
+
+    local download_url="${url}${selected_dir}${selected_file}"
+    echo "Downloading file: $selected_file"
+    wget -P "${DOWNLOAD_DIR}/raspios" "$download_url"
+    if [ $? -ne 0 ]; then echo "Error: Failed to download the file."; return 3
+    else echo "Download completed successfully"; fi
+
+    local downloaded_file="${DOWNLOAD_DIR}/raspios/${selected_file}"
+    echo "Extracting XZ archive..."
+    xz -d "$downloaded_file"
+}
+
+test_raw_raspios() {
+    YO_DIR_IMAGE="${DOWNLOAD_DIR}/raspios"
+    IMAGE_NAME="2024-11-19-raspios-bookworm-arm64.img"
+    MOUNT_DIR="${YO_DIR_IMAGE}/tmp_mount"
+    download_raspios
+    mount_raw_image
 }
