@@ -36,9 +36,10 @@ gen_send_ssh_key() {
     ssh-copy-id -i ~/.ssh/${KEY_ID}.pub ${USER_COMP}@${IP_COMP}
 }
 
-DEEPSEEK_MODEL="deepseek-coder-v2"
+#DEEPSEEK_MODEL="deepseek-coder-v2" # size 8.9 Gb
+DEEPSEEK_MODEL="deepseek-r1:8b"     # size 4.9 Gb
 install_deepseek() {
-    # installation requires ~ 12Gb
+    # installation requires ~ 4.9 + 3 Gb Ollama
     curl -fsSL https://ollama.com/install.sh | sh
     ollama serve
     ollama run ${DEEPSEEK_MODEL}
