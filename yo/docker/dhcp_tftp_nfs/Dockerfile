@@ -7,7 +7,7 @@ RUN apt-get update && \
     apt-get install --no-install-recommends -y \
         isc-dhcp-server \
         tftpd-hpa \
-        procps \
+        rpcbind \
         nfs-kernel-server && \
     # Clean rootfs
     apt-get clean all && \
@@ -17,12 +17,14 @@ RUN apt-get update && \
     # Configure DHCP
     touch /var/lib/dhcp/dhcpd.leases && \
     # Configure rpcbind
-    mkdir -p /run/sendsigs.omit.d && \
-    touch /run/sendsigs.omit.d/rpcbind
+    mkdir -p /run/sendsigs.omit.d /etc/modprobe.d /var/lib/nfs && \
+    touch /run/sendsigs.omit.d/rpcbind && \
+    touch /var/lib/nfs/state
     
 # ALEX debug    
-RUN apt-get install net-tools
-RUN apt-get install -y rsyslog
+#RUN apt-get install -y net-tools
+#RUN apt-get install -y rsyslog
+#RUN apt-get install -y lsof procps
 
 WORKDIR /
 

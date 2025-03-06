@@ -1,7 +1,6 @@
 IMAGE=dhcp_tftp_server
 DOCKER_TAG=buster-slim
 DOCKER_NETWORK="--network=host"
-#TFTP_DIR=${PWD}/tftp
 TFTP_DIR=/tmp/tftp
 NFS_DIR=/tmp/nfs
 
@@ -14,12 +13,14 @@ IP_MASK2="24"
 IP_RANGE="range 10.0.7.100 10.0.7.200"
 
 run:
-	sudo nmcli connection add type ethernet ifname $(HOST_NET_IFACE) ip4 $(IP_ADDR)/$(IP_MASK2) autoconnect yes
-	#sudo ip addr flush dev $(HOST_NET_IFACE)
-	#sudo ip addr add $(IP_ADDR)/$(IP_MASK) dev $(HOST_NET_IFACE)
-	#sudo ip link set $(HOST_NET_IFACE) up
+	#sudo nmcli connection add type ethernet ifname $(HOST_NET_IFACE) ip4 $(IP_ADDR)/$(IP_MASK2) autoconnect yes
+	sudo ip addr flush dev $(HOST_NET_IFACE)
+	sudo ip addr add $(IP_ADDR)/$(IP_MASK) dev $(HOST_NET_IFACE)
+	sudo ip link set $(HOST_NET_IFACE) up
 	
-	lsmod | grep -o nfsd || sudo modprobe nfsd
+	sudo modprobe nfsd
+	if ps aux | grep -q /sbin/rpcbind; then sudo systemctl stop rpcbind.socket; sudo systemctl stop rpcbind; fi
+
 	docker run --rm -ti --privileged \
 	${DOCKER_NETWORK} \
 	-v ${TFTP_DIR}:/srv/tftp \
