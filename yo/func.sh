@@ -370,10 +370,25 @@ download_raspios() {
     xz -d "$downloaded_file"
 }
 
+raspberry_pi4_cmdline_for_nfs() {
+test -f $1/cmdline.txt.orig || cp $1/cmdline.txt $1/cmdline.txt.orig
+cat <<-EOF > $1/cmdline.txt
+    console=serial0,115200 console=tty1 root=/dev/nfs nfsroot=10.0.7.1:/nfs,hard,nolock rw ip=dhcp rootwait
+EOF
+}
+
+add_cmdline_for_nfs_raspios() {
+    get_mount_base
+    if [ -d ${MOUNT_BASE_DIR}/part1 ]; then
+        raspberry_pi4_cmdline_for_nfs "${MOUNT_BASE_DIR}/part1"
+    fi
+}
+
 test_raw_raspios() {
     YO_DIR_IMAGE="${DOWNLOAD_DIR}/raspios"
     IMAGE_NAME="2024-11-19-raspios-bookworm-arm64.img"
     MOUNT_DIR="${YO_DIR_IMAGE}/tmp_mount"
     download_raspios
     mount_raw_image
+    add_cmdline_for_nfs_raspios
 }
