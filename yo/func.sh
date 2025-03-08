@@ -30,6 +30,8 @@ DOCKER_DIR=""
 IMAGE_NAME="core-image-minimal-raspberrypi4.rpi-sdimg"
 MOUNT_DIR="${YO_DIR_IMAGE}/tmp_mount"
 DOWNLOAD_DIR="$HOME/distrib"
+CMDLINE_RPI4="docker/dhcp_tftp_nfs/rpi/cmdline.txt"
+ENABLE_UART_RPI4="docker/dhcp_tftp_nfs/rpi/enable_uart.txt"
 
 # общие функции для работы с IDE vscode
 gen_send_ssh_key() {
@@ -370,11 +372,31 @@ download_raspios() {
     xz -d "$downloaded_file"
 }
 
+add_lines_to_config_txt() {
+    local enable_uart_txt="$1"
+    local config_txt="$2"
+    while IFS= read -r line; do
+        if ! grep -q "^${line}" "$config_txt"; then
+            echo "$line" >> "$config_txt"
+            echo "add string: $line in $config_txt"
+        else
+            echo "string '$line' already exists in $config_txt"
+        fi
+    done < "$enable_uart_txt"
+}
+
 raspberry_pi4_cmdline_for_nfs() {
-test -f $1/cmdline.txt.orig || cp $1/cmdline.txt $1/cmdline.txt.orig
-cat <<-EOF > $1/cmdline.txt
-    console=serial0,115200 console=tty1 root=/dev/nfs nfsroot=10.0.7.1:/nfs,hard,nolock rw ip=dhcp rootwait
-EOF
+    # save original files on first launch
+    test -f $1/cmdline.txt.orig || cp $1/cmdline.txt $1/cmdline.txt.orig
+    test -f $1/config.txt.orig || cp $1/config.txt $1/config.txt.orig
+    # change cmdline.txt and add enable_uart in cmdline.txt
+    test -f ${CMDLINE_RPI4} && cp ${CMDLINE_RPI4} $1/cmdline.txt
+    # if the IP address NFS is not explicitly set, then by default
+    if cat $1/cmdline.txt | grep -q "NFS_IP_ADDRESS"; then
+        local default_ip="10.0.7.1"
+        sed -i "s|NFS_IP_ADDRESS|$default_ip|" $1/cmdline.txt
+    fi
+    add_lines_to_config_txt "${ENABLE_UART_RPI4}" "$1/config.txt"
 }
 
 add_cmdline_for_nfs_raspios() {

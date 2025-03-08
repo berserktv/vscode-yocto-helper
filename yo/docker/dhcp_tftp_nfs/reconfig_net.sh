@@ -2,6 +2,7 @@
 INTERFACES_FILE="${PWD}/etc/network/interfaces"
 DHCP_SERVER_FILE="${PWD}/etc/default/isc-dhcp-server"
 DHCP_CONF_FILE="${PWD}/etc/dhcp/dhcpd.conf"
+CMDLINE_FILE="${PWD}/rpi/cmdline.txt"
 MAKEFILE="${PWD}/Makefile"
 
 if ! grep -q 'HOST_NET_IFACE=""' Makefile; then
@@ -69,3 +70,6 @@ echo "added $LOCAL_NET_IFACE to $INTERFACES_FILE with address $IP_ADDR and netma
 sed -i '/^subnet/,/^}/ s/^/#/' $DHCP_CONF_FILE
 echo "$DHCP_CONFIG" >> $DHCP_CONF_FILE
 echo "adding DHCP_CONFIG to $DHCP_CONF_FILE"
+# change IP NFS server
+sed -i "s|NFS_IP_ADDRESS|$IP_ADDR|" $CMDLINE_FILE
+echo "adding NFS_IP_ADDRESS to $CMDLINE_FILE"
