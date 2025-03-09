@@ -30,6 +30,8 @@ DOCKER_DIR=""
 IMAGE_NAME="core-image-minimal-raspberrypi4.rpi-sdimg"
 MOUNT_DIR="${YO_DIR_IMAGE}/tmp_mount"
 DOWNLOAD_DIR="$HOME/distrib"
+DOWNLOAD_RASPIOS="${DOWNLOAD_DIR}/raspios"
+DOWNLOAD_UBUNTU="${DOWNLOAD_DIR}/ubuntu"
 CMDLINE_RPI4="docker/dhcp_tftp_nfs/rpi/cmdline.txt"
 ENABLE_UART_RPI4="docker/dhcp_tftp_nfs/rpi/enable_uart.txt"
 
@@ -326,10 +328,22 @@ umount_raw_image() {
     fi
 }
 
+download_files() {
+    local dir="$1"
+    local url="$2"
+    shift 2
+    for FILE in "$@"; do
+        local file_path="$dir/$FILE"
+        local file_dir=$(dirname "$file_path")
+        mkdir -p "$file_dir"
+        if [ -f "$file_path" ]; then echo "file $file_path already exists, skipping ..."
+        else wget -P "$file_dir" "$url/$FILE" || echo "Failed to download $FILE"; fi
+    done
+}
 
 download_raspios() {
     # arg1 - select version
-    test -d "${DOWNLOAD_DIR}/raspios" || mkdir -p "${DOWNLOAD_DIR}/raspios"
+    test -d "${DOWNLOAD_RASPIOS}" || mkdir -p "${DOWNLOAD_RASPIOS}"
     local url="https://downloads.raspberrypi.com/raspios_arm64/images/"
     local latest_dir
     local selected_dir
@@ -357,17 +371,15 @@ download_raspios() {
     fi
 
     local extracted_file="${selected_file%.xz}"
-    if [ -f "${DOWNLOAD_DIR}/raspios/${extracted_file}" ]; then
-        echo "File already exists: ${DOWNLOAD_DIR}/raspios/${extracted_file}, skipping ..."; return
+    if [ -f "${DOWNLOAD_RASPIOS}/${extracted_file}" ]; then
+        echo "File already exists: ${DOWNLOAD_RASPIOS}/${extracted_file}, skipping ..."; return
     fi
 
-    local download_url="${url}${selected_dir}${selected_file}"
+    local download_url="${url}${selected_dir}"
     echo "Downloading file: $selected_file"
-    wget -P "${DOWNLOAD_DIR}/raspios" "$download_url"
-    if [ $? -ne 0 ]; then echo "Error: Failed to download the file."; return 3
-    else echo "Download completed successfully"; fi
+    download_files "${DOWNLOAD_RASPIOS}" "$download_url" "${selected_file}"
 
-    local downloaded_file="${DOWNLOAD_DIR}/raspios/${selected_file}"
+    local downloaded_file="${DOWNLOAD_RASPIOS}/${selected_file}"
     echo "Extracting XZ archive..."
     xz -d "$downloaded_file"
 }
@@ -406,11 +418,66 @@ add_cmdline_for_nfs_raspios() {
     fi
 }
 
-test_raw_raspios() {
-    YO_DIR_IMAGE="${DOWNLOAD_DIR}/raspios"
+mount_raw_raspios() {
+    YO_DIR_IMAGE="${DOWNLOAD_RASPIOS}"
     IMAGE_NAME="2024-11-19-raspios-bookworm-arm64.img"
-    MOUNT_DIR="${YO_DIR_IMAGE}/tmp_mount"
+    MOUNT_DIR="${DOWNLOAD_RASPIOS}/tmp_mount"
     download_raspios
     mount_raw_image
     add_cmdline_for_nfs_raspios
+}
+
+download_ubuntu() {
+    if [ -z "${IMAGE_NAME}" ]; then echo "Error: Set environment variables IMAGE_NAME, exit"; return 1; fi
+    test -d "${DOWNLOAD_UBUNTU}" || mkdir -p "${DOWNLOAD_UBUNTU}"
+    local download_url="http://releases.ubuntu.com/24.04.2"
+    download_files "${DOWNLOAD_UBUNTU}" "$download_url" "${IMAGE_NAME}"
+}
+
+mount_raw_ubuntu() {
+    YO_DIR_IMAGE="${DOWNLOAD_UBUNTU}"
+    IMAGE_NAME="ubuntu-24.04.2-desktop-amd64.iso"
+    MOUNT_DIR="${DOWNLOAD_UBUNTU}/tmp_mount"
+    download_ubuntu
+    mount_raw_image
+}
+
+download_netboot_ubuntu() {
+    test -d "${DOWNLOAD_UBUNTU}/netboot" || mkdir -p "${DOWNLOAD_UBUNTU}/netboot"
+    local base_url="http://archive.ubuntu.com/ubuntu/dists/bionic-updates/main/installer-amd64/current/images/netboot"
+    local files=(
+        "boot.img.gz"
+        "ldlinux.c32"
+        "mini.iso"
+        "netboot.tar.gz"
+        "pxelinux.0"
+        "pxelinux.cfg/default"
+        "ubuntu-installer/amd64/initrd.gz"
+        "ubuntu-installer/amd64/linux"
+        "ubuntu-installer/amd64/pxelinux.0"
+        "ubuntu-installer/amd64/pxelinux.cfg/default"
+        "ubuntu-installer/amd64/boot-screens/adtxt.cfg"
+        "ubuntu-installer/amd64/boot-screens/exithelp.cfg"
+        "ubuntu-installer/amd64/boot-screens/f1.txt"
+        "ubuntu-installer/amd64/boot-screens/f2.txt"
+        "ubuntu-installer/amd64/boot-screens/f3.txt"
+        "ubuntu-installer/amd64/boot-screens/f4.txt"
+        "ubuntu-installer/amd64/boot-screens/f5.txt"
+        "ubuntu-installer/amd64/boot-screens/f6.txt"
+        "ubuntu-installer/amd64/boot-screens/f7.txt"
+        "ubuntu-installer/amd64/boot-screens/f8.txt"
+        "ubuntu-installer/amd64/boot-screens/f9.txt"
+        "ubuntu-installer/amd64/boot-screens/f10.txt"
+        "ubuntu-installer/amd64/boot-screens/libcom32.c32"
+        "ubuntu-installer/amd64/boot-screens/libutil.c32"
+        "ubuntu-installer/amd64/boot-screens/menu.cfg"
+        "ubuntu-installer/amd64/boot-screens/prompt.cfg"
+        "ubuntu-installer/amd64/boot-screens/rqtxt.cfg"
+        "ubuntu-installer/amd64/boot-screens/splash.png"
+        "ubuntu-installer/amd64/boot-screens/stdmenu.cfg"
+        "ubuntu-installer/amd64/boot-screens/syslinux.cfg"
+        "ubuntu-installer/amd64/boot-screens/txt.cfg"
+        "ubuntu-installer/amd64/boot-screens/vesamenu.c32"
+    )
+    download_files "${DOWNLOAD_UBUNTU}/netboot" "$base_url" "${files[@]}"
 }
