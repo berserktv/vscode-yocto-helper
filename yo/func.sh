@@ -435,14 +435,6 @@ download_ubuntu() {
     download_files "${DOWNLOAD_UBUNTU}" "$download_url" "${IMAGE_NAME}"
 }
 
-mount_raw_ubuntu() {
-    YO_DIR_IMAGE="${DOWNLOAD_UBUNTU}"
-    IMAGE_NAME="ubuntu-24.04.2-desktop-amd64.iso"
-    MOUNT_DIR="${DOWNLOAD_UBUNTU}/tmp_mount"
-    download_ubuntu
-    mount_raw_image
-}
-
 download_netboot_ubuntu() {
     test -d "${DOWNLOAD_UBUNTU}/netboot" || mkdir -p "${DOWNLOAD_UBUNTU}/netboot"
     local base_url="http://archive.ubuntu.com/ubuntu/dists/bionic-updates/main/installer-amd64/current/images/netboot"
@@ -505,4 +497,18 @@ add_menu_item_ubuntu_to_pxe() {
         sed -i "s|IMAGE_NAME|${IMAGE_NAME}|g" "${target_file}"
     fi
     sed -i "s|timeout 0|timeout 50|" "${target_file}"
+}
+
+ubuntu_initrd_and_kernel_to_netboot() {
+    echo "test"
+}
+
+mount_raw_ubuntu() {
+    YO_DIR_IMAGE="${DOWNLOAD_UBUNTU}"
+    IMAGE_NAME="ubuntu-24.04.2-desktop-amd64.iso"
+    MOUNT_DIR="${DOWNLOAD_UBUNTU}/tmp_mount"
+    download_ubuntu
+    download_netboot_ubuntu
+    mount_raw_image
+    ubuntu_initrd_and_kernel_to_netboot
 }
