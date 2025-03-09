@@ -479,7 +479,6 @@ download_netboot_ubuntu() {
 }
 
 add_menu_item_ubuntu_to_pxe() {
-    IMAGE_NAME="ubuntu-24.04.2-desktop-amd64.iso"
     local target_file=${DOWNLOAD_UBUNTU}/netboot/pxelinux.cfg/default
     test -f "${target_file}.orig" || return 1
     test -f "${MENU_ITEM_UBUNTU}" || return 2
@@ -510,5 +509,6 @@ mount_raw_ubuntu() {
     download_ubuntu
     download_netboot_ubuntu
     mount_raw_image
+    add_menu_item_ubuntu_to_pxe
     ubuntu_initrd_and_kernel_to_netboot
 }
