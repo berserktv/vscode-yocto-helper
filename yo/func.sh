@@ -499,7 +499,19 @@ add_menu_item_ubuntu_to_pxe() {
 }
 
 ubuntu_initrd_and_kernel_to_netboot() {
-    echo "test"
+    get_mount_base
+    local kernel_file=${MOUNT_BASE_DIR}/part1/casper/vmlinuz
+    local initrd_file=${MOUNT_BASE_DIR}/part1/casper/initrd
+    local netboot_dir=${DOWNLOAD_UBUNTU}/netboot
+    test -f "${kernel_file}" || return 1
+    test -f "${initrd_file}" || return 2
+    [[ -n "${IMAGE_NAME}" ]] || return 3
+    test -d "${netboot_dir}" || return 4
+
+    local target_dir="${netboot_dir}/${IMAGE_NAME}"
+    test -d "${target_dir}" || mkdir -p "${target_dir}"
+    test -f "${target_dir}/vmlinuz" || cp ${kernel_file} ${target_dir}
+    test -f "${target_dir}/initrd" || cp ${initrd_file} ${target_dir}
 }
 
 mount_raw_ubuntu() {
