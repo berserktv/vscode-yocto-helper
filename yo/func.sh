@@ -34,6 +34,7 @@ DOWNLOAD_RASPIOS="${DOWNLOAD_DIR}/raspios"
 DOWNLOAD_UBUNTU="${DOWNLOAD_DIR}/ubuntu"
 CMDLINE_RPI4="docker/dhcp_tftp_nfs/rpi/cmdline.txt"
 ENABLE_UART_RPI4="docker/dhcp_tftp_nfs/rpi/enable_uart.txt"
+MENU_ITEM_UBUNTU="docker/dhcp_tftp_nfs/ubuntu/menu_item_to_pxe.txt"
 
 # общие функции для работы с IDE vscode
 gen_send_ssh_key() {
@@ -480,4 +481,28 @@ download_netboot_ubuntu() {
         "ubuntu-installer/amd64/boot-screens/vesamenu.c32"
     )
     download_files "${DOWNLOAD_UBUNTU}/netboot" "$base_url" "${files[@]}"
+
+    local cfg_default=${DOWNLOAD_UBUNTU}/netboot/pxelinux.cfg/default
+    test -f "${cfg_default}.orig" || cp "${cfg_default}" "${cfg_default}.orig"
+}
+
+add_menu_item_ubuntu_to_pxe() {
+    IMAGE_NAME="ubuntu-24.04.2-desktop-amd64.iso"
+    local target_file=${DOWNLOAD_UBUNTU}/netboot/pxelinux.cfg/default
+    test -f "${target_file}.orig" || return 1
+    test -f "${MENU_ITEM_UBUNTU}" || return 2
+    [[ -n "${IMAGE_NAME}" ]] || return 3
+
+    cp "${target_file}.orig" "${target_file}"
+    cat "${MENU_ITEM_UBUNTU}" >> "${target_file}"
+
+    # if template parameters are not explicitly specified, then by default
+    if cat "${target_file}" | grep -q "NFS_IP_ADDRESS"; then
+        local default_ip="10.0.7.1"
+        sed -i "s|NFS_IP_ADDRESS|$default_ip|" "${target_file}"
+    fi
+    if cat "${target_file}" | grep -q "IMAGE_NAME"; then
+        sed -i "s|IMAGE_NAME|${IMAGE_NAME}|g" "${target_file}"
+    fi
+    sed -i "s|timeout 0|timeout 50|" "${target_file}"
 }
