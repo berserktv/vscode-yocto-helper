@@ -7,7 +7,7 @@ find_setup_env() {
     local tmp_path=".."
     for i in {1..7}; do
         if [ -f "${tmp_path}/setup-environment" ]; then
-            YO_R="${tmp_path}"
+            export YO_R=$(realpath "${tmp_path}")
             return 0;
         fi
         tmp_path="${tmp_path}/.."
