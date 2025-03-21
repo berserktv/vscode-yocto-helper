@@ -18,6 +18,7 @@ find_setup_env
 
 YO_M=`cat $YO_R/build/conf/local.conf | grep "^MACHINE " | cut -d"'" -f2`
 YO_DIR_IMAGE="$YO_R/build/tmp/deploy/images"
+YO_DIR_PROJECTS="$HOME/yocto"
 YO_IMAGE_NAME=""
 YO_EXT=".wic .rootfs.wic .rpi-sdimg .wic.bz2"
 LI_DISK=""
@@ -523,4 +524,12 @@ mount_raw_ubuntu() {
     mount_raw_image
     add_menu_item_ubuntu_to_pxe
     ubuntu_initrd_and_kernel_to_netboot
+}
+
+example_yocto_demo_minimal_rpi4() {
+    local proj_demo="${YO_DIR_PROJECTS}/yocto-demo-minimal"
+    mkdir -p "${proj_demo}"
+    cd ${proj_demo}
+    repo init -u https://github.com/berserktv/bs-manifest -m raspberry/scarthgap/yocto-demo-minimal.xml
+    repo sync
 }
