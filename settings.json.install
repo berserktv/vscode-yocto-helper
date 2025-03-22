@@ -1,0 +1,59 @@
+{
+    "workbench.colorCustomizations": {
+        "activityBar.activeBackground": "#ab307e",
+        "activityBar.background": "#ab307e",
+        "activityBar.foreground": "#e7e7e7",
+        "activityBar.inactiveForeground": "#e7e7e799",
+        "activityBarBadge.background": "#25320e",
+        "activityBarBadge.foreground": "#e7e7e7",
+        "commandCenter.border": "#e7e7e799",
+        "sash.hoverBorder": "#ab307e",
+        "statusBar.background": "#832561",
+        "statusBar.foreground": "#e7e7e7",
+        "statusBarItem.hoverBackground": "#ab307e",
+        "statusBarItem.remoteBackground": "#832561",
+        "statusBarItem.remoteForeground": "#e7e7e7",
+        "titleBar.activeBackground": "#832561",
+        "titleBar.activeForeground": "#e7e7e7",
+        "titleBar.inactiveBackground": "#83256199",
+        "titleBar.inactiveForeground": "#e7e7e799"
+    },
+    "peacock.color": "#832561",
+    "actionButtons": {
+        "reloadButton": null,
+        "loadNpmCommands": false,
+        "commands": [
+            {
+                "name": "YoctoDemoMinimal",
+                "singleInstance": true,
+                "color": "#ffffff",
+                "command": "cd .vscode/yo; source func.sh; example_yocto_demo_minimal_rpi4",
+            },
+            {
+                "name": "SendSshKey",
+                "singleInstance": true,
+                "color": "#ffffff",
+                "command": "cd .vscode/yo; source func.sh; IP_COMP=192.168.0.1 USER_COMP=user; gen_send_ssh_key",
+            },
+            {
+                "name": "sshfsInstall",
+                "singleInstance": true,
+                "color": "#ffffff",
+                "command": "sudo apt install sshfs",
+            },
+
+            {
+                "name": "Load ◀",
+                "singleInstance": true,
+                "color": "#ffffff",
+                "command": "cp -f .vscode/settings.json.load .vscode/settings.json; exit",
+            },
+            {
+                "name": "INSTALL",
+                "singleInstance": true,
+                "color": "#ffffff",
+                "command": "bash",
+            }
+        ]
+    }
+}

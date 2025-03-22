@@ -24,12 +24,6 @@
         "loadNpmCommands": false,
         "commands": [
             {
-                "name": "Build",
-                "singleInstance": true,
-                "color": "#007fff",
-                "command": "cd .vscode/yo; source func.sh; DOCKER_DIR='docker/ubuntu_18_04' start_session_docker",
-            },
-            {
                 "name": "core-image-minimal",
                 "singleInstance": true,
                 "color": "#007fff",
@@ -48,10 +42,16 @@
                 "command": "sudo picocom --baud 115200 /dev/ttyUSB0",
             },
             {
-                "name": ">>>> Test",
+                "name": "BUILD",
                 "singleInstance": true,
-                "color": "#ff007f",
-                "command": "cp -f .vscode/settings.json.test .vscode/settings.json; exit",
+                "color": "#000000",
+                "command": "cd .vscode/yo; source func.sh; DOCKER_DIR='docker/ubuntu_18_04'; start_session_docker",
+            },
+            {
+                "name": "▶ Load",
+                "singleInstance": true,
+                "color": "#000000",
+                "command": "cp -f .vscode/settings.json.load .vscode/settings.json; exit",
             }
         ]
     }

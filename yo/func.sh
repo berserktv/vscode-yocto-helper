@@ -532,4 +532,8 @@ example_yocto_demo_minimal_rpi4() {
     cd ${proj_demo}
     repo init -u https://github.com/berserktv/bs-manifest -m raspberry/scarthgap/yocto-demo-minimal.xml
     repo sync
+    cd sources/meta-raspberrypi
+    # git clone https://github.com/berserktv/vscode-yocto-helper.git .vscode
+    # rm -fr .vscode/.git
+    code .
 }
