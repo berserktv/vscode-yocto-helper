@@ -28,7 +28,8 @@ KEY_ID="computer_id_rsa"
 CONTAINER_ID=""
 CONTAINER_NAME=""
 DOCKER_DIR=""
-IMAGE_NAME="core-image-minimal-raspberrypi4.rpi-sdimg"
+IMAGE_NAME=""
+IMAGE_DIR=""
 MOUNT_DIR="${YO_DIR_IMAGE}/tmp_mount"
 DOWNLOAD_DIR="$HOME/distrib"
 DOWNLOAD_RASPIOS="${DOWNLOAD_DIR}/raspios"
@@ -243,13 +244,12 @@ get_mount_base() {
 }
 
 mount_raw_image() {
-    find_name_image
-    if [[ -z "${YO_DIR_IMAGE}" || -z "${IMAGE_NAME}" || -z "${MOUNT_DIR}" ]]; then
-        echo "Error: Set environment variables YO_DIR_IMAGE, IMAGE_NAME, and MOUNT_DIR" >&2
+    if [[ -z "${IMAGE_DIR}" || -z "${IMAGE_NAME}" || -z "${MOUNT_DIR}" ]]; then
+        echo "Error: Set environment variables IMAGE_DIR, IMAGE_NAME, and MOUNT_DIR" >&2
         return 1
     fi
 
-    local image_file="${YO_DIR_IMAGE}/${IMAGE_NAME}"
+    local image_file="${IMAGE_DIR}/${IMAGE_NAME}"
     if [ ! -f "${image_file}" ]; then
         echo "Error: Image file ${image_file} not found" >&2
         return 2
@@ -267,7 +267,7 @@ mount_raw_image() {
     local uid=$(id -u)
     local gid=$(id -g)
     get_mount_base
-    test -d ${MOUNT_BASE_DIR} || sudo mkdir -p ${MOUNT_BASE_DIR}
+    mkdir -p ${MOUNT_BASE_DIR}
 
     for part_num in {1..4}; do
         local partition="${loop_dev}p${part_num}"
@@ -278,7 +278,7 @@ mount_raw_image() {
                 continue
             fi
 
-            sudo mkdir -p "${mount_point}"
+            mkdir -p "${mount_point}"
             local fs_type=$(sudo blkid -o value -s TYPE "${partition}")
             case "${fs_type}" in
                 vfat)
@@ -330,6 +330,52 @@ umount_raw_image() {
         done
     else
         echo "Warning: Image file ${image_file} not found, skipping loop device cleanup" >&2
+    fi
+}
+
+select_yocto_image() {
+    j=1
+    IMAGE_NAME=""
+    for image in $YO_IMAGE_NAME; do
+        echo "$j) $image"
+        j=$((j+1))
+    done
+
+    echo -n "=> Select an image to Load:"
+    read SEL
+
+    i=1
+    for image in $YO_IMAGE_NAME; do
+        [ $i -eq $SEL ] && IMAGE_NAME="$image" && break
+        i=$((i+1))
+    done
+    [[ -n "${IMAGE_NAME}" ]] || { echo "Image not selected, exit ..."; return 1; }
+}
+
+
+extract_bz_archive() {
+    local path_name="$1"
+    local out_dir="$2"
+    local out_name="$3"
+    local out_file=${out_dir}/${out_name}
+    test -d "${out_dir}" || return 1;
+    test -f "${out_file}" && {  echo "extract file ${out_file} already exists, skipping ..."; return 2; }
+    bzip2 -dkc "${path_name}" > "${out_file}"
+}
+
+
+mount_raw_yocto() {
+    if find_name_image && select_yocto_image; then
+        IMAGE_DIR="${YO_DIR_IMAGE}/${YO_M}"
+        if [[ "${IMAGE_NAME}" =~ \.bz2$ ]]; then
+            mkdir -p "${MOUNT_DIR}"
+            local out_name="${IMAGE_NAME%.bz2}"
+            extract_bz_archive "${IMAGE_DIR}/${IMAGE_NAME}" "${MOUNT_DIR}" "${out_name}"
+            IMAGE_NAME="${out_name}"
+            IMAGE_DIR="${MOUNT_DIR}"
+        fi
+
+        mount_raw_image
     fi
 }
 
