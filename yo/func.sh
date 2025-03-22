@@ -20,7 +20,7 @@ YO_M=`cat $YO_R/build/conf/local.conf | grep "^MACHINE " | cut -d"'" -f2`
 YO_DIR_IMAGE="$YO_R/build/tmp/deploy/images"
 YO_DIR_PROJECTS="$HOME/yocto"
 YO_IMAGE_NAME=""
-YO_EXT=".wic .rootfs.wic .rpi-sdimg .wic.bz2"
+YO_EXT=".wic .rootfs.wic .rootfs.wic.bz2 .rpi-sdimg .wic.bz2"
 LI_DISK=""
 IP_COMP="192.168.0.1"
 USER_COMP="user"
@@ -107,18 +107,20 @@ start_session_docker() {
 
 find_name_image() {
     IFS=$' '
+    YO_IMAGE_NAME=""
     if [ -z "$YO_M" ]; then echo "MACHINE variable not found"; return -1; fi
 
     for ext in ${YO_EXT}; do
         local find_str=$(ls -1 ${YO_DIR_IMAGE}/${YO_M} | grep "${YO_M}${ext}$")
         if [ -z "$find_str" ]; then
-            echo "NAME IMAGE ${ext} is not found => ${YO_DIR_IMAGE}/${YO_M}"
+            echo "NAME IMAGE ${YO_M}${ext} is not found => ${YO_DIR_IMAGE}/${YO_M}"
         else 
             YO_IMAGE_NAME="$YO_IMAGE_NAME $find_str"
             echo "find: YO_IMAGE_NAME=$YO_IMAGE_NAME"
         fi
     done
 
+    [[ -z "${YO_IMAGE_NAME}" ]] && return 1
     YO_IMAGE_NAME=$(echo "$YO_IMAGE_NAME" | tr '\n' ' ')
     return 0
 }
@@ -173,6 +175,7 @@ select_dd_info() {
     for i in $LI_DISK; do
         for image in $YO_IMAGE_NAME; do
             if [ $SEL == "$j" ]; then
+                mount | grep "^/dev/$i" | awk '{print $1}' | xargs -r sudo umount
                 if echo "$image" | grep -q ".wic.bz2"; then 
                     echo "bzip2 -dc $image | sudo dd of=/dev/$i bs=1M"
                     bzip2 -dc $image | sudo dd of=/dev/$i bs=1M; sync
