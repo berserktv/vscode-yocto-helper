@@ -102,7 +102,7 @@ start_cmd_docker() {
 start_session_docker() {
     local curdir=$(pwd)
     cd $DOCKER_DIR
-    make run
+    make build && make run
     cd $curdir
 }
 
@@ -394,7 +394,7 @@ download_files() {
 
 download_raspios() {
     # arg1 - select version
-    test -d "${DOWNLOAD_RASPIOS}" || mkdir -p "${DOWNLOAD_RASPIOS}"
+    mkdir -p "${DOWNLOAD_RASPIOS}"
     local url="https://downloads.raspberrypi.com/raspios_arm64/images/"
     local latest_dir
     local selected_dir
@@ -470,7 +470,7 @@ add_cmdline_for_nfs_raspios() {
 }
 
 mount_raw_raspios() {
-    YO_DIR_IMAGE="${DOWNLOAD_RASPIOS}"
+    IMAGE_DIR="${DOWNLOAD_RASPIOS}"
     IMAGE_NAME="2024-11-19-raspios-bookworm-arm64.img"
     MOUNT_DIR="${DOWNLOAD_RASPIOS}/tmp_mount"
     download_raspios
@@ -480,13 +480,13 @@ mount_raw_raspios() {
 
 download_ubuntu() {
     if [ -z "${IMAGE_NAME}" ]; then echo "Error: Set environment variables IMAGE_NAME, exit"; return 1; fi
-    test -d "${DOWNLOAD_UBUNTU}" || mkdir -p "${DOWNLOAD_UBUNTU}"
+    mkdir -p "${DOWNLOAD_UBUNTU}"
     local download_url="http://releases.ubuntu.com/24.04.2"
     download_files "${DOWNLOAD_UBUNTU}" "$download_url" "${IMAGE_NAME}"
 }
 
 download_netboot_ubuntu() {
-    test -d "${DOWNLOAD_UBUNTU}/netboot" || mkdir -p "${DOWNLOAD_UBUNTU}/netboot"
+    mkdir -p "${DOWNLOAD_UBUNTU}/netboot"
     local base_url="http://archive.ubuntu.com/ubuntu/dists/bionic-updates/main/installer-amd64/current/images/netboot"
     local files=(
         "boot.img.gz"
@@ -565,7 +565,7 @@ ubuntu_initrd_and_kernel_to_netboot() {
 }
 
 mount_raw_ubuntu() {
-    YO_DIR_IMAGE="${DOWNLOAD_UBUNTU}"
+    IMAGE_DIR="${DOWNLOAD_UBUNTU}"
     IMAGE_NAME="ubuntu-24.04.2-desktop-amd64.iso"
     MOUNT_DIR="${DOWNLOAD_UBUNTU}/tmp_mount"
     download_ubuntu
