@@ -31,7 +31,7 @@ DOCKER_DIR=""
 DOCKER_DIR_MOUNT="/tmp/docker"
 IMAGE_NAME=""
 IMAGE_DIR=""
-MOUNT_DIR="${YO_DIR_IMAGE}/tmp_mount"
+MOUNT_DIR=""
 DOWNLOAD_DIR="$HOME/distrib"
 DOWNLOAD_RASPIOS="${DOWNLOAD_DIR}/raspios"
 DOWNLOAD_UBUNTU="${DOWNLOAD_DIR}/ubuntu"
@@ -161,7 +161,7 @@ select_dd_info() {
     IFS=$' '
     for i in $LI_DISK; do
         for image in $YO_IMAGE_NAME; do
-            if echo "$image" | grep -q ".wic.bz2"; then 
+            if echo "$image" | grep -q "\.wic\.bz2"; then
                 echo "$j) bzip2 -dc $image | sudo dd of=/dev/$i bs=1M"
             else
                 echo "$j) dd if=$image of=/dev/$i bs=1M"
@@ -178,7 +178,7 @@ select_dd_info() {
         for image in $YO_IMAGE_NAME; do
             if [ $SEL == "$j" ]; then
                 mount | grep "^/dev/$i" | awk '{print $1}' | xargs -r sudo umount
-                if echo "$image" | grep -q ".wic.bz2"; then 
+                if echo "$image" | grep -q "\.wic\.bz2"; then
                     echo "bzip2 -dc $image | sudo dd of=/dev/$i bs=1M"
                     bzip2 -dc $image | sudo dd of=/dev/$i bs=1M; sync
                 else
@@ -297,8 +297,8 @@ mount_raw_image() {
 }
 
 umount_raw_image() {
-    if [[ -z "${IMAGE_NAME}" || -z "${MOUNT_DIR}" ]]; then
-        echo "Error: Set environment variables IMAGE_NAME, and MOUNT_DIR, exit ..." >&2; return 1
+    if [[ -z "${IMAGE_DIR}" || -z "${IMAGE_NAME}" || -z "${MOUNT_DIR}" ]]; then
+        echo "Error: Set environment variables IMAGE_DIR, IMAGE_NAME, and MOUNT_DIR" >&2; return 1
     fi
 
     get_mount_base
@@ -322,7 +322,7 @@ umount_raw_image() {
         echo "No mounted partitions found in ${MOUNT_DIR}/${name_without_ext}"
     fi
 
-    local image_file="${YO_DIR_IMAGE}/${IMAGE_NAME}"
+    local image_file="${IMAGE_DIR}/${IMAGE_NAME}"
     if [[ -f "${image_file}" ]]; then
         local loop_devices
         loop_devices=$(losetup -j "${image_file}" | awk -F: '{print $1}')
@@ -583,7 +583,7 @@ create_mount_point_for_docker() {
 
     mkdir -p "${DOCKER_DIR_MOUNT}"
     if [[ -L "${symlink_mount_dir}" && -d "${symlink_mount_dir}" ]]; then
-        rm -f "${symlink_mount_dir}";
+        rm -f "${symlink_mount_dir}"
     fi
     ln -s "$2" "${symlink_mount_dir}"
     if [ $? -eq 0 ]; then echo "create: ln -s $2 ${symlink_mount_dir}"; fi
@@ -606,14 +606,14 @@ mount_raw_ubuntu() {
 mount_raw_yocto() {
     if find_name_image && select_yocto_image; then
         IMAGE_DIR="${YO_DIR_IMAGE}/${YO_M}"
+        MOUNT_DIR="${IMAGE_DIR}/tmp_mount"
+        mkdir -p "${MOUNT_DIR}"
         if [[ "${IMAGE_NAME}" =~ \.bz2$ ]]; then
-            mkdir -p "${MOUNT_DIR}"
             local out_name="${IMAGE_NAME%.bz2}"
             extract_bz_archive "${IMAGE_DIR}/${IMAGE_NAME}" "${MOUNT_DIR}" "${out_name}"
             IMAGE_NAME="${out_name}"
             IMAGE_DIR="${MOUNT_DIR}"
         fi
-
         mount_raw_image
         change_bootloader_name_in_dhcp "raspberry"
         raspberry_pi4_cmdline_for_nfs "${MOUNT_BASE_DIR}/part1"
@@ -622,6 +622,31 @@ mount_raw_yocto() {
 
         # problem with video adapter: used fake kms (old driver)
         sed -i "s|^dtoverlay=vc4-kms-v3d|#&\n dtoverlay=vc4-fkms-v3d|g" "${MOUNT_BASE_DIR}/part1/config.txt"
+    fi
+}
+
+delete_image_bz2() {
+    local path_img="$1"
+    [[ -f "${path_img}" ]] || return 2
+
+    echo "Delete ${path_img} image?"
+    read -p "Unsaved changes will be lost (yes/no):" flag_delete
+    if [ "$flag_delete" = "yes" ]; then rm "${path_img}"; return $?
+    else echo "exit ..."; return 3; fi
+}
+
+umount_raw_yocto() {
+    if find_name_image && select_yocto_image; then
+        IMAGE_DIR="${YO_DIR_IMAGE}/${YO_M}"
+        MOUNT_DIR="${IMAGE_DIR}/tmp_mount"
+        if [[ "${IMAGE_NAME}" =~ \.bz2$ ]]; then
+            IMAGE_NAME="${IMAGE_NAME%.bz2}"
+            IMAGE_DIR="${MOUNT_DIR}"
+            umount_raw_image
+            delete_image_bz2 "${MOUNT_DIR}/${IMAGE_NAME}"
+        else
+            umount_raw_image
+        fi
     fi
 }
 
