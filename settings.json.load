@@ -24,6 +24,12 @@
         "loadNpmCommands": false,
         "commands": [
             {
+                "name": "StartNetbootDemoMinimalRpi4",
+                "singleInstance": true,
+                "color": "#00008b",
+                "command": "cd .vscode/yo; source func.sh; start_netboot_raspberrypi4",
+            },
+            {
                 "name": "sshfsMount",
                 "singleInstance": true,
                 "color": "#007fff",
@@ -42,7 +48,7 @@
                 "command": "cp -f .vscode/settings.json.build .vscode/settings.json; exit",
             },
             {
-                "name": "INSTALL",
+                "name": "LOAD",
                 "singleInstance": true,
                 "color": "#000000",
                 "command": "bash",

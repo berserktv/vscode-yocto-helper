@@ -28,6 +28,7 @@ KEY_ID="computer_id_rsa"
 CONTAINER_ID=""
 CONTAINER_NAME=""
 DOCKER_DIR=""
+DOCKER_DIR_MOUNT="/tmp/docker"
 IMAGE_NAME=""
 IMAGE_DIR=""
 MOUNT_DIR="${YO_DIR_IMAGE}/tmp_mount"
@@ -238,9 +239,11 @@ start_qemu_rpi3_64() {
 }
 
 MOUNT_BASE_DIR=""
+IMAGE_NAME_SHORT=""
 get_mount_base() {
     local name_without_ext="${IMAGE_NAME%.*}"
     MOUNT_BASE_DIR="${MOUNT_DIR}/${name_without_ext}"
+    IMAGE_NAME_SHORT="${name_without_ext}"
 }
 
 mount_raw_image() {
@@ -363,22 +366,6 @@ extract_bz_archive() {
     bzip2 -dkc "${path_name}" > "${out_file}"
 }
 
-
-mount_raw_yocto() {
-    if find_name_image && select_yocto_image; then
-        IMAGE_DIR="${YO_DIR_IMAGE}/${YO_M}"
-        if [[ "${IMAGE_NAME}" =~ \.bz2$ ]]; then
-            mkdir -p "${MOUNT_DIR}"
-            local out_name="${IMAGE_NAME%.bz2}"
-            extract_bz_archive "${IMAGE_DIR}/${IMAGE_NAME}" "${MOUNT_DIR}" "${out_name}"
-            IMAGE_NAME="${out_name}"
-            IMAGE_DIR="${MOUNT_DIR}"
-        fi
-
-        mount_raw_image
-    fi
-}
-
 download_files() {
     local dir="$1"
     local url="$2"
@@ -469,6 +456,24 @@ add_cmdline_for_nfs_raspios() {
     fi
 }
 
+change_bootloader_name_in_dhcp() {
+    [[ -n "$1" ]] || { echo "arg1: bootloader type is missing. Use 'raspberry' or 'pxe'"; return 1; }
+    local name_loader
+    local dhcp_conf="docker/dhcp_tftp_nfs/etc/dhcp/dhcpd.conf"
+    case "$1" in
+        "raspberry") name_loader="bootcode.bin" ;;
+        "pxe")       name_loader="pxelinux.0"   ;;
+        *)           echo "Invalid argument: $1. Allowed: 'raspberry' or 'pxe'"; return 2 ;;
+    esac
+
+    if cat ${dhcp_conf} | grep -q " option bootfile-name \"$name_loader\""; then
+        echo "options $name_loader is already set, exit"; return 0
+    fi
+
+    sed -i "s| option bootfile-name \".*\";| option bootfile-name \"$name_loader\";|" "$dhcp_conf"
+    if [ $? -eq 0 ]; then echo "option $name_loader set in file $dhcp_conf"; fi
+}
+
 mount_raw_raspios() {
     IMAGE_DIR="${DOWNLOAD_RASPIOS}"
     IMAGE_NAME="2024-11-19-raspios-bookworm-arm64.img"
@@ -476,6 +481,7 @@ mount_raw_raspios() {
     download_raspios
     mount_raw_image
     add_cmdline_for_nfs_raspios
+    change_bootloader_name_in_dhcp "raspberry"
 }
 
 download_ubuntu() {
@@ -558,10 +564,29 @@ ubuntu_initrd_and_kernel_to_netboot() {
     [[ -n "${IMAGE_NAME}" ]] || return 3
     test -d "${netboot_dir}" || return 4
 
-    local target_dir="${netboot_dir}/${IMAGE_NAME}"
-    test -d "${target_dir}" || mkdir -p "${target_dir}"
+    local target_dir="${netboot_dir}/${IMAGE_NAME_SHORT}"
+    mkdir -p "${target_dir}"
     test -f "${target_dir}/vmlinuz" || cp ${kernel_file} ${target_dir}
     test -f "${target_dir}/initrd" || cp ${initrd_file} ${target_dir}
+}
+
+create_mount_point_for_docker() {
+    local symlink_mount_dir
+    [[ -n "$1" ]] || { echo "arg1: name, Use 'tftp' or 'nfs'"; return 1; }
+    [[ -n "$2" ]] || { echo "arg2: mount point not set"; return 2; }
+    test -d "$2" || { echo "not find mount point $2"; return 3; }
+    case "$1" in
+        "tftp") symlink_mount_dir="${DOCKER_DIR_MOUNT}/tftp" ;;
+        "nfs")  symlink_mount_dir="${DOCKER_DIR_MOUNT}/nfs"  ;;
+        *)      echo "Invalid argument: $2. Allowed: 'tftp' or 'nfs'"; return 4 ;;
+    esac
+
+    mkdir -p "${DOCKER_DIR_MOUNT}"
+    if [[ -L "${symlink_mount_dir}" && -d "${symlink_mount_dir}" ]]; then
+        rm -f "${symlink_mount_dir}";
+    fi
+    ln -s "$2" "${symlink_mount_dir}"
+    if [ $? -eq 0 ]; then echo "create: ln -s $2 ${symlink_mount_dir}"; fi
 }
 
 mount_raw_ubuntu() {
@@ -573,6 +598,31 @@ mount_raw_ubuntu() {
     mount_raw_image
     add_menu_item_ubuntu_to_pxe
     ubuntu_initrd_and_kernel_to_netboot
+    change_bootloader_name_in_dhcp "pxe"
+    create_mount_point_for_docker "tftp" "${DOWNLOAD_UBUNTU}/netboot"
+    create_mount_point_for_docker "nfs" "${MOUNT_BASE_DIR}/part1"
+}
+
+mount_raw_yocto() {
+    if find_name_image && select_yocto_image; then
+        IMAGE_DIR="${YO_DIR_IMAGE}/${YO_M}"
+        if [[ "${IMAGE_NAME}" =~ \.bz2$ ]]; then
+            mkdir -p "${MOUNT_DIR}"
+            local out_name="${IMAGE_NAME%.bz2}"
+            extract_bz_archive "${IMAGE_DIR}/${IMAGE_NAME}" "${MOUNT_DIR}" "${out_name}"
+            IMAGE_NAME="${out_name}"
+            IMAGE_DIR="${MOUNT_DIR}"
+        fi
+
+        mount_raw_image
+        change_bootloader_name_in_dhcp "raspberry"
+        raspberry_pi4_cmdline_for_nfs "${MOUNT_BASE_DIR}/part1"
+        create_mount_point_for_docker "tftp" "${MOUNT_BASE_DIR}/part1"
+        create_mount_point_for_docker "nfs" "${MOUNT_BASE_DIR}/part2"
+
+        # problem with video adapter: used fake kms (old driver)
+        sed -i "s|^dtoverlay=vc4-kms-v3d|#&\n dtoverlay=vc4-fkms-v3d|g" "${MOUNT_BASE_DIR}/part1/config.txt"
+    fi
 }
 
 example_yocto_demo_minimal_rpi4() {
@@ -585,4 +635,10 @@ example_yocto_demo_minimal_rpi4() {
     # git clone https://github.com/berserktv/vscode-yocto-helper.git .vscode
     # rm -fr .vscode/.git
     code .
+}
+
+start_netboot_raspberrypi4() {
+    mount_raw_yocto
+    DOCKER_DIR='docker/dhcp_tftp_nfs'
+    start_session_docker
 }
