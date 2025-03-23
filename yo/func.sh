@@ -86,7 +86,7 @@ start_cmd_docker() {
     local curdir=$(pwd)
     cd $DOCKER_DIR
     if ! find_docker_id; then
-        make run_detach
+        make build && make run_detach
         if ! find_docker_id; then
             echo "failed to start container => make run_detach ..."
             cd $curdir
