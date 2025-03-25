@@ -482,6 +482,14 @@ download_ubuntu() {
     download_files "${DOWNLOAD_UBUNTU}" "$download_url" "${IMAGE_NAME}"
 }
 
+download_kali() {
+IMAGE_NAME="kali-linux-2024.4-installer-amd64.iso"
+    if [ -z "${IMAGE_NAME}" ]; then echo "Error: Set environment variables IMAGE_NAME, exit"; return 1; fi
+    mkdir -p "${DOWNLOAD_KALI}"
+    local download_url="https://cdimage.kali.org/kali-2024.4"
+    download_files "${DOWNLOAD_KALI}" "$download_url" "${IMAGE_NAME}"
+}
+
 download_netboot_ubuntu() {
     mkdir -p "${DOWNLOAD_UBUNTU}/netboot"
     local base_url="http://archive.ubuntu.com/ubuntu/dists/bionic-updates/main/installer-amd64/current/images/netboot"
@@ -561,6 +569,22 @@ ubuntu_initrd_and_kernel_to_netboot() {
     test -f "${target_dir}/initrd" || cp ${initrd_file} ${target_dir}
 }
 
+kali_initrd_and_kernel_to_netboot() {
+    get_mount_base
+    local kernel_file=${MOUNT_BASE_DIR}/part1/install.amd/vmlinuz
+    local initrd_file=${MOUNT_BASE_DIR}/part1/install.amd/initrd.gz
+    local netboot_dir=${DOWNLOAD_UBUNTU}/netboot
+    test -f "${kernel_file}" || return 1
+    test -f "${initrd_file}" || return 2
+    [[ -n "${IMAGE_NAME}" ]] || return 3
+    test -d "${netboot_dir}" || return 4
+
+    local target_dir="${netboot_dir}/${IMAGE_NAME}"
+    mkdir -p "${target_dir}"
+    test -f "${target_dir}/vmlinuz" || cp ${kernel_file} ${target_dir}
+    test -f "${target_dir}/initrd" || cp ${initrd_file} ${target_dir}/initrd
+}
+
 create_mount_point_for_docker() {
     local symlink_mount_dir
     [[ -n "$1" ]] || { echo "arg1: name, Use 'tftp' or 'nfs'"; return 1; }
@@ -624,13 +648,13 @@ set_env_raw_rpi4() {
         IMAGE_DIR="${YO_DIR_IMAGE}/${YO_M}"
         MOUNT_DIR="${IMAGE_DIR}/tmp_mount"
         if check_bz2_archive "${IMAGE_SEL}"; then
-        mkdir -p "${MOUNT_DIR}"
+            mkdir -p "${MOUNT_DIR}"
             IMAGE_NAME="${IMAGE_SEL%.bz2}"
             extract_bz_archive "${IMAGE_DIR}/${IMAGE_SEL}" "${MOUNT_DIR}" "${IMAGE_NAME}"
             IMAGE_DIR="${MOUNT_DIR}"
         fi
         return 0
-    }
+    fi
     return 1
 }
 
@@ -688,4 +712,15 @@ restore_image_rpi4() {
         restore_orig "${mount_dir}/${file}"
     done
     umount_raw_image
+}
+
+mount_raw_kali() {
+    YO_DIR_IMAGE="${DOWNLOAD_KALI}"
+    IMAGE_NAME="kali-linux-2024.4-installer-amd64.iso"
+    MOUNT_DIR="${DOWNLOAD_KALI}/tmp_mount"
+    download_kali
+    download_netboot_ubuntu
+    mount_raw_image
+    add_menu_item_ubuntu_to_pxe
+    kali_initrd_and_kernel_to_netboot
 }
