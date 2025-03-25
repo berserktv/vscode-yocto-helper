@@ -708,7 +708,7 @@ restore_image_rpi4() {
 
     mount_raw_image
     local mount_dir="${MOUNT_BASE_DIR}/part1"
-    for file in "config.txt cmdline.txt"; do
+    for file in config.txt cmdline.txt; do
         restore_orig "${mount_dir}/${file}"
     done
     umount_raw_image
