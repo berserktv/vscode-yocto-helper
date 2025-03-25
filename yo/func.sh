@@ -23,6 +23,7 @@ YO_IMAGE_NAME=""
 YO_EXT=".wic .rootfs.wic .rootfs.wic.bz2 .rpi-sdimg .wic.bz2"
 LI_DISK=""
 IP_COMP="192.168.0.1"
+IP_TFTP="10.0.7.1"
 USER_COMP="user"
 KEY_ID="computer_id_rsa"
 CONTAINER_ID=""
@@ -31,6 +32,7 @@ DOCKER_DIR=""
 DOCKER_DIR_MOUNT="/tmp/docker"
 IMAGE_NAME=""
 IMAGE_DIR=""
+IMAGE_SEL=""
 MOUNT_DIR=""
 DOWNLOAD_DIR="$HOME/distrib"
 DOWNLOAD_RASPIOS="${DOWNLOAD_DIR}/raspios"
@@ -209,7 +211,7 @@ ssh_config_add_negotiate() {
 }
 
 # to run image Raspberrypi3-64 Yocto with SysVinit you need to change variables (not tested under Systemd)
-# SERIAL_CONSOLES = "115200;ttyAMA0"; SERIAL_CONSOLES_CHECK = "ttyAMA0:ttyS0" => /etc/inittab
+# SERIAL_CONSOLES = "115200;ttyAMA0"; SERIAL_CONSOLES_CHECK = "ttyAMA0:ttyS0"; => /etc/inittab
 start_qemu_rpi3_64() {
     local curdir=$(pwd)
     local kernel="Image"
@@ -338,7 +340,7 @@ umount_raw_image() {
 
 select_yocto_image() {
     j=1
-    IMAGE_NAME=""
+    IMAGE_SEL=""
     for image in $YO_IMAGE_NAME; do
         echo "$j) $image"
         j=$((j+1))
@@ -349,21 +351,10 @@ select_yocto_image() {
 
     i=1
     for image in $YO_IMAGE_NAME; do
-        [ $i -eq $SEL ] && IMAGE_NAME="$image" && break
+        [ $i -eq $SEL ] && IMAGE_SEL="$image" && break
         i=$((i+1))
     done
-    [[ -n "${IMAGE_NAME}" ]] || { echo "Image not selected, exit ..."; return 1; }
-}
-
-
-extract_bz_archive() {
-    local path_name="$1"
-    local out_dir="$2"
-    local out_name="$3"
-    local out_file=${out_dir}/${out_name}
-    test -d "${out_dir}" || return 1;
-    test -f "${out_file}" && {  echo "extract file ${out_file} already exists, skipping ..."; return 2; }
-    bzip2 -dkc "${path_name}" > "${out_file}"
+    [[ -n "${IMAGE_SEL}" ]] || { echo "Image not selected, exit ..."; return 1; }
 }
 
 download_files() {
@@ -443,7 +434,7 @@ raspberry_pi4_cmdline_for_nfs() {
     test -f ${CMDLINE_RPI4} && cp ${CMDLINE_RPI4} $1/cmdline.txt
     # if the IP address NFS is not explicitly set, then by default
     if cat $1/cmdline.txt | grep -q "NFS_IP_ADDRESS"; then
-        local default_ip="10.0.7.1"
+        local default_ip="${IP_TFTP}"
         sed -i "s|NFS_IP_ADDRESS|$default_ip|" $1/cmdline.txt
     fi
     add_lines_to_config_txt "${ENABLE_UART_RPI4}" "$1/config.txt"
@@ -465,7 +456,7 @@ change_bootloader_name_in_dhcp() {
         "pxe")       name_loader="pxelinux.0"   ;;
         *)           echo "Invalid argument: $1. Allowed: 'raspberry' or 'pxe'"; return 2 ;;
     esac
-
+    
     if cat ${dhcp_conf} | grep -q " option bootfile-name \"$name_loader\""; then
         echo "options $name_loader is already set, exit"; return 0
     fi
@@ -545,7 +536,7 @@ add_menu_item_ubuntu_to_pxe() {
 
     # if template parameters are not explicitly specified, then by default
     if cat "${target_file}" | grep -q "NFS_IP_ADDRESS"; then
-        local default_ip="10.0.7.1"
+        local default_ip="${IP_TFTP}"
         sed -i "s|NFS_IP_ADDRESS|$default_ip|" "${target_file}"
     fi
     if cat "${target_file}" | grep -q "IMAGE_NAME"; then
@@ -580,7 +571,6 @@ create_mount_point_for_docker() {
         "nfs")  symlink_mount_dir="${DOCKER_DIR_MOUNT}/nfs"  ;;
         *)      echo "Invalid argument: $2. Allowed: 'tftp' or 'nfs'"; return 4 ;;
     esac
-
     mkdir -p "${DOCKER_DIR_MOUNT}"
     if [[ -L "${symlink_mount_dir}" && -d "${symlink_mount_dir}" ]]; then
         rm -f "${symlink_mount_dir}"
@@ -603,50 +593,65 @@ mount_raw_ubuntu() {
     create_mount_point_for_docker "nfs" "${MOUNT_BASE_DIR}/part1"
 }
 
-mount_raw_yocto() {
-    if find_name_image && select_yocto_image; then
-        IMAGE_DIR="${YO_DIR_IMAGE}/${YO_M}"
-        MOUNT_DIR="${IMAGE_DIR}/tmp_mount"
-        mkdir -p "${MOUNT_DIR}"
-        if [[ "${IMAGE_NAME}" =~ \.bz2$ ]]; then
-            local out_name="${IMAGE_NAME%.bz2}"
-            extract_bz_archive "${IMAGE_DIR}/${IMAGE_NAME}" "${MOUNT_DIR}" "${out_name}"
-            IMAGE_NAME="${out_name}"
-            IMAGE_DIR="${MOUNT_DIR}"
-        fi
-        mount_raw_image
-        change_bootloader_name_in_dhcp "raspberry"
-        raspberry_pi4_cmdline_for_nfs "${MOUNT_BASE_DIR}/part1"
-        create_mount_point_for_docker "tftp" "${MOUNT_BASE_DIR}/part1"
-        create_mount_point_for_docker "nfs" "${MOUNT_BASE_DIR}/part2"
+check_bz2_archive() {
+    [[ "$1" =~ \.bz2$ ]] && return 0
+    return 1
+}
 
-        # problem with video adapter: used fake kms (old driver)
-        sed -i "s|^dtoverlay=vc4-kms-v3d|#&\n dtoverlay=vc4-fkms-v3d|g" "${MOUNT_BASE_DIR}/part1/config.txt"
-    fi
+extract_bz_archive() {
+    local path_name="$1"
+    local out_dir="$2"
+    local out_name="$3"
+    local out_file=${out_dir}/${out_name}
+    test -d "${out_dir}" || return 1;
+    test -f "${out_file}" && {  echo "extract file ${out_file} already exists, skipping ..."; return 2; }
+    bzip2 -dkc "${path_name}" > "${out_file}"
 }
 
 delete_image_bz2() {
     local path_img="$1"
-    [[ -f "${path_img}" ]] || return 2
+    [[ -f "${path_img}" ]] || return 1
 
     echo "Delete ${path_img} image?"
     read -p "Unsaved changes will be lost (yes/no):" flag_delete
     if [ "$flag_delete" = "yes" ]; then rm "${path_img}"; return $?
-    else echo "exit ..."; return 3; fi
+    else echo "exit ..."; return 2; fi
 }
 
-umount_raw_yocto() {
+set_env_raw_rpi4() {
     if find_name_image && select_yocto_image; then
+        IMAGE_NAME="${IMAGE_SEL}"
         IMAGE_DIR="${YO_DIR_IMAGE}/${YO_M}"
         MOUNT_DIR="${IMAGE_DIR}/tmp_mount"
-        if [[ "${IMAGE_NAME}" =~ \.bz2$ ]]; then
-            IMAGE_NAME="${IMAGE_NAME%.bz2}"
+        if check_bz2_archive "${IMAGE_SEL}"; then
+        mkdir -p "${MOUNT_DIR}"
+            IMAGE_NAME="${IMAGE_SEL%.bz2}"
+            extract_bz_archive "${IMAGE_DIR}/${IMAGE_SEL}" "${MOUNT_DIR}" "${IMAGE_NAME}"
             IMAGE_DIR="${MOUNT_DIR}"
-            umount_raw_image
-            delete_image_bz2 "${MOUNT_DIR}/${IMAGE_NAME}"
-        else
-            umount_raw_image
         fi
+        return 0
+    }
+    return 1
+}
+
+mount_raw_rpi4() {
+    if ! set_env_raw_rpi4; then return 1; fi
+
+    mount_raw_image
+    change_bootloader_name_in_dhcp "raspberry"
+    raspberry_pi4_cmdline_for_nfs "${MOUNT_BASE_DIR}/part1"
+    create_mount_point_for_docker "tftp" "${MOUNT_BASE_DIR}/part1"
+    create_mount_point_for_docker "nfs" "${MOUNT_BASE_DIR}/part2"
+    # problem with video adapter: used fake kms (old driver)
+    sed -i "s|^dtoverlay=vc4-kms-v3d|#&\n dtoverlay=vc4-fkms-v3d|g" "${MOUNT_BASE_DIR}/part1/config.txt"
+}
+
+umount_raw_rpi4() {
+    if ! set_env_raw_rpi4; then return 1; fi
+
+            umount_raw_image
+    if check_bz2_archive "${IMAGE_SEL}"; then
+            delete_image_bz2 "${MOUNT_DIR}/${IMAGE_NAME}"
     fi
 }
 
@@ -662,8 +667,25 @@ example_yocto_demo_minimal_rpi4() {
     code .
 }
 
-start_netboot_raspberrypi4() {
-    mount_raw_yocto
+start_netboot_rpi4() {
+    mount_raw_rpi4
     DOCKER_DIR='docker/dhcp_tftp_nfs'
     start_session_docker
+}
+
+restore_orig() {
+    local file="$1"
+    [[ -f "${file}" ]] && cp "${file}" "${file}.old" && echo "Save: ${file} => ${file}.old"
+    [[ -f "${file}.orig" ]] && cp "${file}.orig" "${file}" && echo "Restore: ${file}.orig => ${file}"
+}
+
+restore_image_rpi4() {
+    if ! set_env_raw_rpi4; then return 1; fi
+
+    mount_raw_image
+    local mount_dir="${MOUNT_BASE_DIR}/part1"
+    for file in "config.txt cmdline.txt"; do
+        restore_orig "${mount_dir}/${file}"
+    done
+    umount_raw_image
 }
