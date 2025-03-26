@@ -11,7 +11,7 @@ if ! grep -q 'HOST_NET_IFACE=""' Makefile; then
 fi
 
 # find local network interface for host
-LOCAL_NET_IFACE=$(ip link show | awk -F: '$0 !~ "lo|vir|docker|veth|br" {print $2; getline; print $2}' | tr -d ' ' | head -n 1)
+LOCAL_NET_IFACE=$(ip link show | awk -F: '$0 !~ "lo|vir|docker|veth|br|wl" {print $2; getline; print $2}' | tr -d ' ' | head -n 1)
 
 if [ -z "$LOCAL_NET_IFACE" ]; then
     echo "No local network interface found, exiting ..."
