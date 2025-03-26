@@ -30,6 +30,7 @@ CONTAINER_ID=""
 CONTAINER_NAME=""
 DOCKER_DIR=""
 DOCKER_DIR_MOUNT="/tmp/docker"
+DOCKER_DHCP_TFTP="docker/dhcp_tftp_nfs"
 IMAGE_NAME=""
 IMAGE_DIR=""
 IMAGE_SEL=""
@@ -77,6 +78,13 @@ find_docker_id() {
     local id=$(docker ps | grep -m1 $CONTAINER_NAME | cut -d" " -f1)
     if [ -z "$id" ]; then CONTAINER_ID=""; return 1;
     else CONTAINER_ID=$id; return 0; fi
+}
+
+docker_dhcp_tftp_reconfig_net() {
+    local curdir=$(pwd)
+    cd "${DOCKER_DHCP_TFTP}"
+    ./reconfig_net.sh
+    cd $curdir
 }
 
 start_cmd_docker() {
@@ -360,14 +368,16 @@ select_yocto_image() {
 download_files() {
     local dir="$1"
     local url="$2"
+    local count_error=0
     shift 2
     for FILE in "$@"; do
         local file_path="$dir/$FILE"
         local file_dir=$(dirname "$file_path")
         mkdir -p "$file_dir"
-        if [ -f "$file_path" ]; then echo "file $file_path already exists, skipping ..."
-        else wget -P "$file_dir" "$url/$FILE" || echo "Failed to download $FILE"; fi
+        if [ -f "$file_path" ]; then echo "file $file_path already exists, skipping ...";
+        else wget -P "$file_dir" "$url/$FILE" || { echo "Failed to download $FILE"; count=$((count+1)); }; fi
     done
+    return $count_error
 }
 
 download_raspios() {
@@ -480,6 +490,7 @@ download_ubuntu() {
     mkdir -p "${DOWNLOAD_UBUNTU}"
     local download_url="http://releases.ubuntu.com/24.04.2"
     download_files "${DOWNLOAD_UBUNTU}" "$download_url" "${IMAGE_NAME}"
+    return $?
 }
 
 download_kali() {
@@ -528,16 +539,17 @@ download_netboot_ubuntu() {
         "ubuntu-installer/amd64/boot-screens/vesamenu.c32"
     )
     download_files "${DOWNLOAD_UBUNTU}/netboot" "$base_url" "${files[@]}"
-
+    local ret=$?
     local cfg_default=${DOWNLOAD_UBUNTU}/netboot/pxelinux.cfg/default
     test -f "${cfg_default}.orig" || cp "${cfg_default}" "${cfg_default}.orig"
+    return $ret
 }
 
 add_menu_item_ubuntu_to_pxe() {
     local target_file=${DOWNLOAD_UBUNTU}/netboot/pxelinux.cfg/default
     test -f "${target_file}.orig" || return 1
     test -f "${MENU_ITEM_UBUNTU}" || return 2
-    [[ -n "${IMAGE_NAME}" ]] || return 3
+    [[ -n "${IMAGE_NAME_SHORT}" ]] || return 3
 
     cp "${target_file}.orig" "${target_file}"
     cat "${MENU_ITEM_UBUNTU}" >> "${target_file}"
@@ -548,7 +560,7 @@ add_menu_item_ubuntu_to_pxe() {
         sed -i "s|NFS_IP_ADDRESS|$default_ip|" "${target_file}"
     fi
     if cat "${target_file}" | grep -q "IMAGE_NAME"; then
-        sed -i "s|IMAGE_NAME|${IMAGE_NAME}|g" "${target_file}"
+        sed -i "s|IMAGE_NAME|${IMAGE_NAME_SHORT}|g" "${target_file}"
     fi
     sed -i "s|timeout 0|timeout 50|" "${target_file}"
 }
@@ -599,19 +611,23 @@ create_mount_point_for_docker() {
     if [[ -L "${symlink_mount_dir}" && -d "${symlink_mount_dir}" ]]; then
         rm -f "${symlink_mount_dir}"
     fi
+    if [[ "$1" == "tftp" && -d "${symlink_mount_dir}" ]]; then
+        rm -rf "${symlink_mount_dir}"
+    fi
+
     ln -s "$2" "${symlink_mount_dir}"
     if [ $? -eq 0 ]; then echo "create: ln -s $2 ${symlink_mount_dir}"; fi
 }
 
 mount_raw_ubuntu() {
     IMAGE_DIR="${DOWNLOAD_UBUNTU}"
-    IMAGE_NAME="ubuntu-24.04.2-desktop-amd64.iso"
     MOUNT_DIR="${DOWNLOAD_UBUNTU}/tmp_mount"
-    download_ubuntu
-    download_netboot_ubuntu
+    if [ ! download_ubuntu ]; then return 1; fi
+    if [ ! download_netboot_ubuntu ]; then return 2; fi
     mount_raw_image
     add_menu_item_ubuntu_to_pxe
     ubuntu_initrd_and_kernel_to_netboot
+    docker_dhcp_tftp_reconfig_net
     change_bootloader_name_in_dhcp "pxe"
     create_mount_point_for_docker "tftp" "${DOWNLOAD_UBUNTU}/netboot"
     create_mount_point_for_docker "nfs" "${MOUNT_BASE_DIR}/part1"
@@ -694,6 +710,21 @@ example_yocto_demo_minimal_rpi4() {
 start_netboot_rpi4() {
     mount_raw_rpi4
     DOCKER_DIR='docker/dhcp_tftp_nfs'
+    start_session_docker
+}
+
+stop_docker() {
+    local docker_name_tag="$1"
+    local hash=$(docker ps -aq --filter "ancestor=${docker_name_tag}")
+    [[ $? -eq 0 ]] && docker stop "${hash}"
+}
+
+start_ubuntu_24_04() {
+    #IMAGE_NAME="ubuntu-22.04.1-desktop-amd64.iso"
+    IMAGE_NAME="ubuntu-24.04.2-desktop-amd64.iso"
+    DOCKER_DIR='docker/dhcp_tftp_nfs'
+    mount_raw_ubuntu
+    stop_docker "dhcp_tftp_nfs:buster-slim"
     start_session_docker
 }
 

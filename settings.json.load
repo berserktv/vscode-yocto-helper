@@ -24,6 +24,12 @@
         "loadNpmCommands": false,
         "commands": [
             {
+                "name": "StartUbuntu-24.04",
+                "singleInstance": true,
+                "color": "#00008b",
+                "command": "cd .vscode/yo; source func.sh; start_ubuntu_24_04",
+            },
+            {
                 "name": "StartNetbootDemoRpi4",
                 "singleInstance": true,
                 "color": "#00008b",
