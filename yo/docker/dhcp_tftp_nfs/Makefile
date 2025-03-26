@@ -1,8 +1,8 @@
-IMAGE=dhcp_tftp_server
+IMAGE=dhcp_tftp_nfs
 DOCKER_TAG=buster-slim
 DOCKER_NETWORK="--network=host"
-TFTP_DIR=/tmp/tftp
-NFS_DIR=/tmp/nfs
+TFTP_DIR=/tmp/docker/tftp
+NFS_DIR=/tmp/docker/nfs
 
 # Host network config =>
 HOST_NET_IFACE=""
