@@ -375,7 +375,7 @@ download_files() {
         local file_dir=$(dirname "$file_path")
         mkdir -p "$file_dir"
         if [ -f "$file_path" ]; then echo "file $file_path already exists, skipping ...";
-        else wget -P "$file_dir" "$url/$FILE" || { echo "Failed to download $FILE"; count=$((count+1)); }; fi
+        else wget -P "$file_dir" "$url/$FILE" || { echo "Failed to download $FILE"; count_error=$((count_error+1)); }; fi
     done
     return $count_error
 }
@@ -597,6 +597,22 @@ kali_initrd_and_kernel_to_netboot() {
     test -f "${target_dir}/initrd" || cp ${initrd_file} ${target_dir}/initrd
 }
 
+clean_tmp_mount_dir() {
+    local dir_path="$1"
+    if [ -d "${dir_path}" ]; then
+        if [ -L "${dir_path}" ]; then
+            rm -f "${dir_path}"
+        else
+            if [[ "$(stat -c %u "$dir_path")" -eq 0 ]]; then
+                echo "dir => $dir_path owned by root: sudo rm -fr ${dir_path}"
+                sudo rm -fr "${dir_path}"
+            else
+                rm -fr "${symlink_mount_dir}";
+            fi
+        fi
+    fi
+}
+
 create_mount_point_for_docker() {
     local symlink_mount_dir
     [[ -n "$1" ]] || { echo "arg1: name, Use 'tftp' or 'nfs'"; return 1; }
@@ -608,12 +624,7 @@ create_mount_point_for_docker() {
         *)      echo "Invalid argument: $2. Allowed: 'tftp' or 'nfs'"; return 4 ;;
     esac
     mkdir -p "${DOCKER_DIR_MOUNT}"
-    if [[ -L "${symlink_mount_dir}" && -d "${symlink_mount_dir}" ]]; then
-        rm -f "${symlink_mount_dir}"
-    fi
-    if [[ "$1" == "tftp" && -d "${symlink_mount_dir}" ]]; then
-        rm -rf "${symlink_mount_dir}"
-    fi
+    clean_tmp_mount_dir "${symlink_mount_dir}"
 
     ln -s "$2" "${symlink_mount_dir}"
     if [ $? -eq 0 ]; then echo "create: ln -s $2 ${symlink_mount_dir}"; fi
@@ -701,8 +712,14 @@ example_yocto_demo_minimal_rpi4() {
     cd ${proj_demo}
     repo init -u https://github.com/berserktv/bs-manifest -m raspberry/scarthgap/yocto-demo-minimal.xml
     repo sync
+    # script for start VSCode
+    echo "#!/bin/bash" > start-vscode.sh
+    echo "cd sources/meta-raspberrypi" >> start-vscode.sh
+    echo "code ." >> start-vscode.sh
+    chmod u+x start-vscode.sh
+    # start new VSCode instance
     cd sources/meta-raspberrypi
-    # git clone https://github.com/berserktv/vscode-yocto-helper.git .vscode
+    git clone https://github.com/berserktv/vscode-yocto-helper.git .vscode
     # rm -fr .vscode/.git
     code .
 }
