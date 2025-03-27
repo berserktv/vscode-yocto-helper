@@ -607,7 +607,7 @@ clean_tmp_mount_dir() {
                 echo "dir => $dir_path owned by root: sudo rm -fr ${dir_path}"
                 sudo rm -fr "${dir_path}"
             else
-                rm -fr "${symlink_mount_dir}";
+                rm -fr "${dir_path}";
             fi
         fi
     fi
