@@ -502,46 +502,20 @@ IMAGE_NAME="kali-linux-2024.4-installer-amd64.iso"
 }
 
 download_netboot_ubuntu() {
-    mkdir -p "${DOWNLOAD_UBUNTU}/netboot"
+    local netboot="${DOWNLOAD_UBUNTU}/netboot"
     local base_url="http://archive.ubuntu.com/ubuntu/dists/bionic-updates/main/installer-amd64/current/images/netboot"
-    local files=(
-        "boot.img.gz"
-        "ldlinux.c32"
-        "mini.iso"
-        "netboot.tar.gz"
-        "pxelinux.0"
-        "pxelinux.cfg/default"
-        "ubuntu-installer/amd64/initrd.gz"
-        "ubuntu-installer/amd64/linux"
-        "ubuntu-installer/amd64/pxelinux.0"
-        "ubuntu-installer/amd64/pxelinux.cfg/default"
-        "ubuntu-installer/amd64/boot-screens/adtxt.cfg"
-        "ubuntu-installer/amd64/boot-screens/exithelp.cfg"
-        "ubuntu-installer/amd64/boot-screens/f1.txt"
-        "ubuntu-installer/amd64/boot-screens/f2.txt"
-        "ubuntu-installer/amd64/boot-screens/f3.txt"
-        "ubuntu-installer/amd64/boot-screens/f4.txt"
-        "ubuntu-installer/amd64/boot-screens/f5.txt"
-        "ubuntu-installer/amd64/boot-screens/f6.txt"
-        "ubuntu-installer/amd64/boot-screens/f7.txt"
-        "ubuntu-installer/amd64/boot-screens/f8.txt"
-        "ubuntu-installer/amd64/boot-screens/f9.txt"
-        "ubuntu-installer/amd64/boot-screens/f10.txt"
-        "ubuntu-installer/amd64/boot-screens/libcom32.c32"
-        "ubuntu-installer/amd64/boot-screens/libutil.c32"
-        "ubuntu-installer/amd64/boot-screens/menu.cfg"
-        "ubuntu-installer/amd64/boot-screens/prompt.cfg"
-        "ubuntu-installer/amd64/boot-screens/rqtxt.cfg"
-        "ubuntu-installer/amd64/boot-screens/splash.png"
-        "ubuntu-installer/amd64/boot-screens/stdmenu.cfg"
-        "ubuntu-installer/amd64/boot-screens/syslinux.cfg"
-        "ubuntu-installer/amd64/boot-screens/txt.cfg"
-        "ubuntu-installer/amd64/boot-screens/vesamenu.c32"
-    )
-    download_files "${DOWNLOAD_UBUNTU}/netboot" "$base_url" "${files[@]}"
+    local file="netboot.tar.gz"
+    download_files "${DOWNLOAD_UBUNTU}" "$base_url" "${file}"
+    [[ $? -ne 0 ]] && return 1
+    [[ -d "${netboot}" ]] && { echo "dir ${netboot} already exists, skipping ..."; return 0; }
+
+    mkdir -p "${netboot}"
+    extract_tar_archive "${DOWNLOAD_UBUNTU}/${file}" "${netboot}"
     local ret=$?
-    local cfg_default=${DOWNLOAD_UBUNTU}/netboot/pxelinux.cfg/default
-    test -f "${cfg_default}.orig" || cp "${cfg_default}" "${cfg_default}.orig"
+    [[ $ret -ne 0 ]] && return 2
+
+    local cfg_default=${netboot}/pxelinux.cfg/default
+    save_orig "${cfg_default}" "off_symlink"
     return $ret
 }
 
@@ -553,7 +527,6 @@ add_menu_item_ubuntu_to_pxe() {
 
     cp "${target_file}.orig" "${target_file}"
     cat "${MENU_ITEM_UBUNTU}" >> "${target_file}"
-
     # if template parameters are not explicitly specified, then by default
     if cat "${target_file}" | grep -q "NFS_IP_ADDRESS"; then
         local default_ip="${IP_TFTP}"
@@ -633,9 +606,9 @@ create_mount_point_for_docker() {
 mount_raw_ubuntu() {
     IMAGE_DIR="${DOWNLOAD_UBUNTU}"
     MOUNT_DIR="${DOWNLOAD_UBUNTU}/tmp_mount"
-    if [ ! download_ubuntu ]; then return 1; fi
-    if [ ! download_netboot_ubuntu ]; then return 2; fi
-    mount_raw_image
+    download_ubuntu || return 1
+    download_netboot_ubuntu || return 2
+    mount_raw_image || return 3
     add_menu_item_ubuntu_to_pxe
     ubuntu_initrd_and_kernel_to_netboot
     docker_dhcp_tftp_reconfig_net
@@ -657,6 +630,16 @@ extract_bz_archive() {
     test -d "${out_dir}" || return 1;
     test -f "${out_file}" && {  echo "extract file ${out_file} already exists, skipping ..."; return 2; }
     bzip2 -dkc "${path_name}" > "${out_file}"
+}
+
+extract_tar_archive() {
+    local archive="$1"
+    local out_dir="$2"
+    mkdir -p "$out_dir"
+
+    tar -xzf "$archive" -C "$out_dir"
+    [[ $? -ne 0 ]] && { echo "Error: tar -xzf $archive -C $out_dir"; return 1; }
+    echo "Success! tar -xzf $archive -C $out_dir"
 }
 
 delete_image_bz2() {
@@ -700,9 +683,9 @@ mount_raw_rpi4() {
 umount_raw_rpi4() {
     if ! set_env_raw_rpi4; then return 1; fi
 
-            umount_raw_image
+    umount_raw_image
     if check_bz2_archive "${IMAGE_SEL}"; then
-            delete_image_bz2 "${MOUNT_DIR}/${IMAGE_NAME}"
+        delete_image_bz2 "${MOUNT_DIR}/${IMAGE_NAME}"
     fi
 }
 
@@ -743,6 +726,18 @@ start_ubuntu_24_04() {
     mount_raw_ubuntu
     stop_docker "dhcp_tftp_nfs:buster-slim"
     start_session_docker
+}
+
+save_orig() {
+    local file="$1"
+    local flag=0
+    [[ -f "${file}.orig" ]] || { cp "${file}" "${file}.orig" && echo "first save: ${file} => ${file}.orig"; flag=1; }
+    [[ -z "$2" ]] && return 0
+
+    if [ "$2" == "off_symlink" ]; then
+        # first save
+        [[ "$flag" == "1" && -L "${file}" ]] && mv "${file}" "${file}.off"
+    fi
 }
 
 restore_orig() {
