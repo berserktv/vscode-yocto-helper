@@ -166,7 +166,7 @@ find_sd_card() {
         done 
     fi
     if [ -n "$LI_DISK" ]; then echo "LIST SD card => $LI_DISK"; return 0;
-    else echo "not find SD card => exit..."; return 1; fi
+    else echo "SD card not found => exiting ..."; return 1; fi
 }
 
 select_dd_info() {
@@ -317,7 +317,7 @@ umount_raw_image() {
     get_mount_base
     local name_without_ext="${IMAGE_NAME%.*}"
     if [ ! -d ${MOUNT_BASE_DIR} ]; then
-        echo "Error: not find ${MOUNT_BASE_DIR}, exit ..." >&2; return 2
+        echo "Error: ${MOUNT_BASE_DIR} not found, exiting ..." >&2; return 2
     fi
 
     local mounted_parts=("${MOUNT_BASE_DIR}"/part*)
@@ -365,7 +365,7 @@ select_yocto_image() {
         [ $i -eq $SEL ] && IMAGE_SEL="$image" && break
         i=$((i+1))
     done
-    [[ -n "${IMAGE_SEL}" ]] || { echo "Image not selected, exit ..."; return 1; }
+    [[ -n "${IMAGE_SEL}" ]] || { echo "Image not selected, exiting ..."; return 1; }
 }
 
 download_files() {
@@ -689,7 +689,7 @@ delete_image_bz2() {
     echo "Delete ${path_img} image?"
     read -p "Unsaved changes will be lost (yes/no):" flag_delete
     if [ "$flag_delete" = "yes" ]; then rm "${path_img}"; return $?
-    else echo "exit ..."; return 2; fi
+    else echo "exiting ..."; return 2; fi
 }
 
 set_env_raw_rpi4() {
