@@ -576,11 +576,11 @@ add_menu_item_ubuntu_to_pxe() {
     sed -i "s|timeout 0|timeout 50|" "${target_file}"
 }
 
-ubuntu_initrd_and_kernel_to_netboot() {
+initrd_and_kernel_to_netboot() {
     get_mount_base
-    local kernel_file=${MOUNT_BASE_DIR}/part1/casper/vmlinuz
-    local initrd_file=${MOUNT_BASE_DIR}/part1/casper/initrd
-    local netboot_dir=${DOWNLOAD_UBUNTU}/netboot
+    local kernel_file="$1"
+    local initrd_file="$2"
+    local netboot_dir="$3"
     test -f "${kernel_file}" || return 1
     test -f "${initrd_file}" || return 2
     [[ -n "${IMAGE_NAME}" ]] || return 3
@@ -588,24 +588,11 @@ ubuntu_initrd_and_kernel_to_netboot() {
 
     local target_dir="${netboot_dir}/${IMAGE_NAME_SHORT}"
     mkdir -p "${target_dir}"
-    test -f "${target_dir}/vmlinuz" || cp ${kernel_file} ${target_dir}
-    test -f "${target_dir}/initrd" || cp ${initrd_file} ${target_dir}
-}
+    if test -f "${target_dir}/vmlinuz"; then echo "File found: ${target_dir}/vmlinuz, skipping ..."
+    else cp "${kernel_file}" "${target_dir}/vmlinuz" && echo "cp ${kernel_file} ${target_dir}/vmlinuz"; fi
 
-kali_initrd_and_kernel_to_netboot() {
-    get_mount_base
-    local kernel_file=${MOUNT_BASE_DIR}/part1/install.amd/vmlinuz
-    local initrd_file=${MOUNT_BASE_DIR}/part1/install.amd/initrd.gz
-    local netboot_dir=${DOWNLOAD_UBUNTU}/netboot
-    test -f "${kernel_file}" || return 1
-    test -f "${initrd_file}" || return 2
-    [[ -n "${IMAGE_NAME}" ]] || return 3
-    test -d "${netboot_dir}" || return 4
-
-    local target_dir="${netboot_dir}/${IMAGE_NAME}"
-    mkdir -p "${target_dir}"
-    test -f "${target_dir}/vmlinuz" || cp ${kernel_file} ${target_dir}
-    test -f "${target_dir}/initrd" || cp ${initrd_file} ${target_dir}/initrd
+    if test -f "${target_dir}/initrd"; then echo "File found: ${target_dir}/initrd, skipping ..."
+    else cp "${initrd_file}" "${target_dir}/initrd" && echo "cp ${initrd_file} ${target_dir}/initrd"; fi
 }
 
 clean_tmp_mount_dir() {
@@ -649,11 +636,14 @@ mount_raw_ubuntu() {
     mount_raw_image || return 3
 
     local pxe_default="${DOWNLOAD_UBUNTU}/netboot/pxelinux.cfg/default"
+    local kernel="${MOUNT_BASE_DIR}/part1/casper/vmlinuz"
+    local initrd="${MOUNT_BASE_DIR}/part1/casper/initrd"
+    local netboot="${DOWNLOAD_UBUNTU}/netboot"
     add_menu_item_netboot "${pxe_default}"  "${MENU_ITEM_UBUNTU}"
-    ubuntu_initrd_and_kernel_to_netboot
+    initrd_and_kernel_to_netboot "${kernel}" "${initrd}" "${netboot}"
     docker_dhcp_tftp_reconfig_net
     change_bootloader_name_in_dhcp "pxe"
-    create_mount_point_for_docker "tftp" "${DOWNLOAD_UBUNTU}/netboot"
+    create_mount_point_for_docker "tftp" "${netboot}"
     create_mount_point_for_docker "nfs" "${MOUNT_BASE_DIR}/part1"
 }
 
@@ -806,11 +796,14 @@ mount_raw_kali() {
     mount_raw_image || return 3
 
     local pxe_default="${DOWNLOAD_KALI}/netboot/pxelinux.cfg/default"
+    local kernel="${MOUNT_BASE_DIR}/part1/install.amd/vmlinuz"
+    local initrd="${MOUNT_BASE_DIR}/part1/install.amd/initrd.gz"
+    local netboot="${DOWNLOAD_KALI}/netboot"
     add_menu_item_netboot "${pxe_default}" "${MENU_ITEM_UBUNTU}"
-    kali_initrd_and_kernel_to_netboot
+    initrd_and_kernel_to_netboot "${kernel}" "${initrd}" "${netboot}"
     docker_dhcp_tftp_reconfig_net
     change_bootloader_name_in_dhcp "pxe"
-    create_mount_point_for_docker "tftp" "${DOWNLOAD_KALI}/netboot"
+    create_mount_point_for_docker "tftp" "${netboot}"
     create_mount_point_for_docker "nfs" "${MOUNT_BASE_DIR}/part1"
 }
 
