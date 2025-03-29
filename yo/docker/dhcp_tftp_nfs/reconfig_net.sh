@@ -6,7 +6,7 @@ CMDLINE_FILE="${PWD}/rpi/cmdline.txt"
 MAKEFILE="${PWD}/Makefile"
 
 if ! grep -q 'HOST_NET_IFACE=""' Makefile; then
-    echo "HOST_NET_IFACE is set in Makefile, exiting."
+    echo "HOST_NET_IFACE is set in Makefile, skipping ..."
     exit 0
 fi
 
