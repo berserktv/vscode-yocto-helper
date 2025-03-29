@@ -34,10 +34,13 @@ DOCKER_DHCP_TFTP="docker/dhcp_tftp_nfs"
 IMAGE_NAME=""
 IMAGE_DIR=""
 IMAGE_SEL=""
+IMAGE_KALI_URL=""
+IMAGE_UBUNTU_URL=""
 MOUNT_DIR=""
 DOWNLOAD_DIR="$HOME/distrib"
 DOWNLOAD_RASPIOS="${DOWNLOAD_DIR}/raspios"
 DOWNLOAD_UBUNTU="${DOWNLOAD_DIR}/ubuntu"
+DOWNLOAD_KALI="${DOWNLOAD_DIR}/kali"
 CMDLINE_RPI4="docker/dhcp_tftp_nfs/rpi/cmdline.txt"
 ENABLE_UART_RPI4="docker/dhcp_tftp_nfs/rpi/enable_uart.txt"
 MENU_ITEM_UBUNTU="docker/dhcp_tftp_nfs/ubuntu/menu_item_to_pxe.txt"
@@ -468,7 +471,7 @@ change_bootloader_name_in_dhcp() {
     esac
     
     if cat ${dhcp_conf} | grep -q " option bootfile-name \"$name_loader\""; then
-        echo "options $name_loader is already set, exit"; return 0
+        echo "options $name_loader is already set, skipping ..."; return 0
     fi
 
     sed -i "s| option bootfile-name \".*\";| option bootfile-name \"$name_loader\";|" "$dhcp_conf"
@@ -488,35 +491,70 @@ mount_raw_raspios() {
 download_ubuntu() {
     if [ -z "${IMAGE_NAME}" ]; then echo "Error: Set environment variables IMAGE_NAME, exit"; return 1; fi
     mkdir -p "${DOWNLOAD_UBUNTU}"
-    local download_url="http://releases.ubuntu.com/24.04.2"
-    download_files "${DOWNLOAD_UBUNTU}" "$download_url" "${IMAGE_NAME}"
+    download_files "${DOWNLOAD_UBUNTU}" "${IMAGE_UBUNTU_URL}" "${IMAGE_NAME}"
     return $?
 }
 
 download_kali() {
-IMAGE_NAME="kali-linux-2024.4-installer-amd64.iso"
     if [ -z "${IMAGE_NAME}" ]; then echo "Error: Set environment variables IMAGE_NAME, exit"; return 1; fi
     mkdir -p "${DOWNLOAD_KALI}"
-    local download_url="https://cdimage.kali.org/kali-2024.4"
-    download_files "${DOWNLOAD_KALI}" "$download_url" "${IMAGE_NAME}"
+    download_files "${DOWNLOAD_KALI}" "${IMAGE_KALI_URL}" "${IMAGE_NAME}"
+    return $?
 }
 
-download_netboot_ubuntu() {
-    local netboot="${DOWNLOAD_UBUNTU}/netboot"
-    local base_url="http://archive.ubuntu.com/ubuntu/dists/bionic-updates/main/installer-amd64/current/images/netboot"
+download_netboot() {
+    local download="$1"
+    local base_url="$2"
+    local netboot="${download}/netboot"
     local file="netboot.tar.gz"
-    download_files "${DOWNLOAD_UBUNTU}" "$base_url" "${file}"
+    [[ -n "$3" ]] && file="$3"
+
+    download_files "${download}" "$base_url" "${file}"
     [[ $? -ne 0 ]] && return 1
     [[ -d "${netboot}" ]] && { echo "dir ${netboot} already exists, skipping ..."; return 0; }
 
     mkdir -p "${netboot}"
-    extract_tar_archive "${DOWNLOAD_UBUNTU}/${file}" "${netboot}"
+    extract_tar_archive "${download}/${file}" "${netboot}"
     local ret=$?
     [[ $ret -ne 0 ]] && return 2
 
     local cfg_default=${netboot}/pxelinux.cfg/default
     save_orig "${cfg_default}" "off_symlink"
     return $ret
+}
+
+download_netboot_ubuntu() {
+    local download_dir="${DOWNLOAD_UBUNTU}"
+    local base_url="http://archive.ubuntu.com/ubuntu/dists/bionic-updates/main/installer-amd64/current/images/netboot"
+    download_netboot "${download_dir}" "${base_url}"
+    return $?
+}
+
+download_netboot_kali() {
+    local download_dir="${DOWNLOAD_KALI}"
+    local base_url="https://http.kali.org/kali/dists/kali-rolling/main/installer-amd64/current/images/netboot"
+    download_netboot "${download_dir}" "${base_url}"
+    return $?
+}
+
+add_menu_item_netboot() {
+    local target_file="$1"
+    local template_file="$2"
+    test -f "${target_file}.orig" || return 1
+    test -f "${template_file}" || return 2
+    [[ -n "${IMAGE_NAME_SHORT}" ]] || return 3
+
+    cp "${target_file}.orig" "${target_file}"
+    cat "${template_file}" >> "${target_file}"
+    # if template parameters are not explicitly specified, then by default
+    if cat "${target_file}" | grep -q "NFS_IP_ADDRESS"; then
+        local default_ip="${IP_TFTP}"
+        sed -i "s|NFS_IP_ADDRESS|$default_ip|" "${target_file}"
+    fi
+    if cat "${target_file}" | grep -q "IMAGE_NAME"; then
+        sed -i "s|IMAGE_NAME|${IMAGE_NAME_SHORT}|g" "${target_file}"
+    fi
+    sed -i "s|timeout 0|timeout 50|" "${target_file}"
 }
 
 add_menu_item_ubuntu_to_pxe() {
@@ -609,7 +647,9 @@ mount_raw_ubuntu() {
     download_ubuntu || return 1
     download_netboot_ubuntu || return 2
     mount_raw_image || return 3
-    add_menu_item_ubuntu_to_pxe
+
+    local pxe_default="${DOWNLOAD_UBUNTU}/netboot/pxelinux.cfg/default"
+    add_menu_item_netboot "${pxe_default}"  "${MENU_ITEM_UBUNTU}"
     ubuntu_initrd_and_kernel_to_netboot
     docker_dhcp_tftp_reconfig_net
     change_bootloader_name_in_dhcp "pxe"
@@ -722,10 +762,10 @@ stop_docker() {
 start_ubuntu_24_04() {
     #IMAGE_NAME="ubuntu-22.04.1-desktop-amd64.iso"
     IMAGE_NAME="ubuntu-24.04.2-desktop-amd64.iso"
+    IMAGE_UBUNTU_URL="http://releases.ubuntu.com/24.04.2"
     DOCKER_DIR='docker/dhcp_tftp_nfs'
-    mount_raw_ubuntu
     stop_docker "dhcp_tftp_nfs:buster-slim"
-    start_session_docker
+    mount_raw_ubuntu && start_session_docker
 }
 
 save_orig() {
@@ -758,12 +798,26 @@ restore_image_rpi4() {
 }
 
 mount_raw_kali() {
-    YO_DIR_IMAGE="${DOWNLOAD_KALI}"
+    IMAGE_DIR="${DOWNLOAD_KALI}"
     IMAGE_NAME="kali-linux-2024.4-installer-amd64.iso"
     MOUNT_DIR="${DOWNLOAD_KALI}/tmp_mount"
-    download_kali
-    download_netboot_ubuntu
-    mount_raw_image
-    add_menu_item_ubuntu_to_pxe
+    download_kali || return 1
+    download_netboot_kali || return 2
+    mount_raw_image || return 3
+
+    local pxe_default="${DOWNLOAD_KALI}/netboot/pxelinux.cfg/default"
+    add_menu_item_netboot "${pxe_default}" "${MENU_ITEM_UBUNTU}"
     kali_initrd_and_kernel_to_netboot
+    docker_dhcp_tftp_reconfig_net
+    change_bootloader_name_in_dhcp "pxe"
+    create_mount_point_for_docker "tftp" "${DOWNLOAD_KALI}/netboot"
+    create_mount_point_for_docker "nfs" "${MOUNT_BASE_DIR}/part1"
+}
+
+start_kali_24_4() {
+    IMAGE_NAME="kali-linux-2024.4-installer-amd64.iso"
+    IMAGE_KALI_URL="https://cdimage.kali.org/kali-2024.4"
+    DOCKER_DIR='docker/dhcp_tftp_nfs'
+    stop_docker "dhcp_tftp_nfs:buster-slim"
+    mount_raw_kali && start_session_docker
 }
