@@ -1,7 +1,7 @@
-IMAGE = ubuntu_18_04_for_rpi
+IMAGE = ubuntu_18_04
 # каталог для сборки образа внутри контейнера, такой же путь надо указать в файле Dockerfile см. метку WARNING
-PUB   = "/mnt/docker/ubuntu_18_04"
-# путь до корневого каталога сборки, в котором находится файл setup-environment (если не задан, то текущий)
+PUB   = "/mnt/data"
+# путь до корневого каталога сборки, в котором находится файл setup-environment (если не задан, то ../docker)
 YO_R ?= $(shell dirname $(shell pwd))
 
 run:

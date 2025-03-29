@@ -2,9 +2,9 @@ FROM ubuntu:18.04
 # Переключаю Ubuntu в неинтерактивный режим — чтобы избежать лишних запросов
 ENV DEBIAN_FRONTEND noninteractive 
 
-# WARNING PUB = "/mnt/docker/ubuntu_18_04"
+# WARNING PUB = "/mnt/data"
 #
-RUN mkdir -p "/mnt/docker/ubuntu_18_04"
+RUN mkdir -p "/mnt/data"
 
 # Устанавливаю локаль и mc
 RUN apt update && apt -y upgrade \
@@ -25,10 +25,10 @@ RUN	apt -y install \
 	gawk wget git-core diffstat unzip texinfo gcc-multilib \
     build-essential chrpath socat libsdl1.2-dev xterm
 
-RUN	apt -y install iputils-ping
+#RUN	apt -y install iputils-ping
 
 # дополнительные пакеты, исправляющие ошибки сборки для 18.04
-RUN	apt -y install python-pip cpio
+#RUN	apt -y install python-pip cpio
 
 RUN echo 'root:docker' | chpasswd
 
@@ -41,4 +41,4 @@ RUN chown -R user:user /home/user
 # Примечание: для подключения к работающему контейнеру под root (hash см. docker ps)
 # docker exec -u 0 -it hash_container bash
 USER user
-ENTRYPOINT ["sh", "-c", "cd /mnt/docker/ubuntu_18_04 && ./shell.sh"]
+ENTRYPOINT ["sh", "-c", "cd /mnt/data && ./shell.sh"]
