@@ -14,13 +14,23 @@ find_setup_env() {
     done
     echo "error: 'setup-environment' not found in parent directories, env: 'YO_R' wrong path ..."; return 1
 }
+check_first_start() {
+    [[ -d "${YO_R}/build" ]] && return 0
+    [[ ! -f "${YO_R}/shell.sh" ]] && return 1
+    cd "${YO_R}" && ./shell.sh
+    cd "${CURDIR}"
+}
 find_setup_env
+check_first_start
 
 YO_M=`cat $YO_R/build/conf/local.conf | grep "^MACHINE " | cut -d"'" -f2`
 YO_DIR_IMAGE="$YO_R/build/tmp/deploy/images"
 YO_DIR_PROJECTS="$HOME/yocto"
 YO_IMAGE_NAME=""
 YO_EXT=".wic .rootfs.wic .rootfs.wic.bz2 .rpi-sdimg .wic.bz2"
+DOCKER_DIR=""
+DOCKER_DIR_MOUNT="/tmp/docker"
+DOCKER_DHCP_TFTP="docker/dhcp_tftp_nfs"
 LI_DISK=""
 IP_COMP="192.168.0.1"
 IP_TFTP="10.0.7.1"
@@ -28,9 +38,6 @@ USER_COMP="user"
 KEY_ID="computer_id_rsa"
 CONTAINER_ID=""
 CONTAINER_NAME=""
-DOCKER_DIR=""
-DOCKER_DIR_MOUNT="/tmp/docker"
-DOCKER_DHCP_TFTP="docker/dhcp_tftp_nfs"
 IMAGE_NAME=""
 IMAGE_DIR=""
 IMAGE_SEL=""
@@ -84,10 +91,9 @@ find_docker_id() {
 }
 
 docker_dhcp_tftp_reconfig_net() {
-    local curdir=$(pwd)
     cd "${DOCKER_DHCP_TFTP}"
     ./reconfig_net.sh
-    cd $curdir
+    cd "${CURDIR}"
 }
 
 start_cmd_docker() {
@@ -97,27 +103,25 @@ start_cmd_docker() {
     fi
 
     local cmd_args=$1
-    local curdir=$(pwd)
     cd $DOCKER_DIR
     if ! find_docker_id; then
         make build && make run_detach
         if ! find_docker_id; then
             echo "failed to start container => make run_detach ..."
-            cd $curdir
+            cd "${CURDIR}"
             return 2;
         fi
     fi
 
     echo "docker exec -it ${CONTAINER_ID} bash -c \"$cmd_args\""
     docker exec -it ${CONTAINER_ID} bash -c "$cmd_args"
-    cd $curdir
+    cd "${CURDIR}"
 }
 
 start_session_docker() {
-    local curdir=$(pwd)
-    cd $DOCKER_DIR
+    cd "${DOCKER_DIR}"
     make build && make run
-    cd $curdir
+    cd "${CURDIR}"
 }
 
 find_name_image() {
@@ -224,7 +228,6 @@ ssh_config_add_negotiate() {
 # to run image Raspberrypi3-64 Yocto with SysVinit you need to change variables (not tested under Systemd)
 # SERIAL_CONSOLES = "115200;ttyAMA0"; SERIAL_CONSOLES_CHECK = "ttyAMA0:ttyS0"; => /etc/inittab
 start_qemu_rpi3_64() {
-    local curdir=$(pwd)
     local kernel="Image"
     local dtb="bcm2837-rpi-3-b.dtb"
     local image="core-image-minimal-raspberrypi3-64.rpi-sdimg"
@@ -248,7 +251,7 @@ start_qemu_rpi3_64() {
         -drive file=${image},format=raw,if=sd,readonly=off \
         -append "console=ttyAMA0,115200 root=/dev/mmcblk0p2 rw earlycon=pl011,0x3f201000" \
         -nographic
-    cd $curdir
+    cd "${CURDIR}"
 }
 
 MOUNT_BASE_DIR=""
