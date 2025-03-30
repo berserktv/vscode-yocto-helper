@@ -2,6 +2,7 @@
 
 # корневой каталог yocto, где будет располагаться каталог build, относительно текущего каталога
 YO_R="../.."
+CURDIR=$(pwd)
 find_setup_env() {
     if [ -f "${YO_R}/setup-environment" ]; then return 0; fi
     local tmp_path=".."
@@ -728,6 +729,8 @@ example_yocto_demo_minimal_rpi4() {
     cd ${proj_demo}
     repo init -u https://github.com/berserktv/bs-manifest -m raspberry/scarthgap/yocto-demo-minimal.xml
     repo sync
+    # first start (create build)
+    ./shell.sh
     # script for start VSCode
     echo "#!/bin/bash" > start-vscode.sh
     echo "cd sources/meta-raspberrypi" >> start-vscode.sh
