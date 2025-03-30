@@ -7,8 +7,8 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN mkdir -p "/mnt/data"
 
 # Устанавливаю локаль и mc
-RUN apt update && apt -y upgrade \
-    && apt -y install \
+RUN apt update && \
+    apt -y install \
     mc language-pack-ru \
     && locale-gen ru_RU.UTF-8 \
     && locale-gen en_US.UTF-8 \
@@ -35,8 +35,6 @@ RUN echo 'root:docker' | chpasswd
 # Создание пользователя докера
 RUN groupadd --gid 1000 user \
 	&& useradd --uid 1000 --gid user --shell /bin/bash --create-home user
-
-RUN chown -R user:user /home/user
 
 # Примечание: для подключения к работающему контейнеру под root (hash см. docker ps)
 # docker exec -u 0 -it hash_container bash
