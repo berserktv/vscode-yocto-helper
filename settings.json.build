@@ -45,7 +45,7 @@
                 "name": "BUILD",
                 "singleInstance": true,
                 "color": "#000000",
-                "command": "cd .vscode/yo; source func.sh; DOCKER_DIR='docker/ubuntu_18_04'; start_session_docker",
+                "command": "cd .vscode/yo; source func.sh; DOCKER_DIR='docker/ubuntu_22_04'; start_session_docker",
             },
             {
                 "name": "▶ Load",
