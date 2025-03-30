@@ -15,14 +15,7 @@ find_setup_env() {
     done
     echo "error: 'setup-environment' not found in parent directories, env: 'YO_R' wrong path ..."; return 1
 }
-check_first_start() {
-    [[ -d "${YO_R}/build" ]] && return 0
-    [[ ! -f "${YO_R}/shell.sh" ]] && return 1
-    cd "${YO_R}" && ./shell.sh
-    cd "${CURDIR}"
-}
 find_setup_env
-check_first_start
 
 YO_M=`cat $YO_R/build/conf/local.conf | grep "^MACHINE " | cut -d"'" -f2`
 YO_DIR_IMAGE="$YO_R/build/tmp/deploy/images"
@@ -97,6 +90,17 @@ docker_dhcp_tftp_reconfig_net() {
     cd "${CURDIR}"
 }
 
+check_build_dir_exist() {
+    [[ -d "${YO_R}/build" ]] && return 0
+    [[ ! -f "${YO_R}/shell.sh" ]] && return 1
+
+    cd "${YO_R}"
+    echo "exit" | ./shell.sh
+    cd "${CURDIR}"
+    echo "Dir ${YO_R}/build is missing, MACHINE not found, setup-environment restarted, Run again ..."
+    return 2
+}
+
 start_cmd_docker() {
     if [ -z "$1" ]; then
         echo "error: start_cmd_docker(), arg1 command name empty ..."
@@ -104,6 +108,9 @@ start_cmd_docker() {
     fi
 
     local cmd_args=$1
+    check_build_dir_exist
+    [[ $? -eq 2 ]] && return 2
+
     cd $DOCKER_DIR
     if ! find_docker_id; then
         make build && make run_detach
