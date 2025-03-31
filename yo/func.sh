@@ -608,16 +608,22 @@ initrd_and_kernel_to_netboot() {
 
 clean_tmp_mount_dir() {
     local dir_path="$1"
-    if [ -d "${dir_path}" ]; then
+    local prefix="${DOCKER_DIR_MOUNT:-/tmp/docker}"
+    [[ -z "${dir_path}" ]] && { echo "Error: Path is empty!"; return 1; }
+    [[ -d "${dir_path}" ]] || { echo "Not a directory ${dir_path}"; return 2; }
+    [[ "${dir_path}" == "${prefix}" ]] && { rm -r "${dir_path}"; return 0; }
+
         if [ -L "${dir_path}" ]; then
-            rm -f "${dir_path}"
+        rm "${dir_path}"
         else
-            if [[ "$(stat -c %u "$dir_path")" -eq 0 ]]; then
-                echo "dir => $dir_path owned by root: sudo rm -fr ${dir_path}"
-                sudo rm -fr "${dir_path}"
+        local abs_path=$(realpath "$dir_path" 2>/dev/null)
+        [[ "${abs_path}" != "${prefix}"/* ]] && { echo "error: Dir $abs_path is outside"; return 3; }
+
+        if [[ "$(stat -c %u "$abs_path")" -eq 0 ]]; then
+            echo "dir => $abs_path owned by root: sudo rm -r ${abs_path}"
+            sudo rm -r "${abs_path}"
             else
-                rm -fr "${dir_path}";
-            fi
+            rm -r "${abs_path}"
         fi
     fi
 }
@@ -737,7 +743,7 @@ example_yocto_demo_minimal_rpi4() {
     repo init -u https://github.com/berserktv/bs-manifest -m raspberry/scarthgap/yocto-demo-minimal.xml
     repo sync
     # first start (create build)
-    ./shell.sh
+    echo "exit" | ./shell.sh
     # script for start VSCode
     echo "#!/bin/bash" > start-vscode.sh
     echo "cd sources/meta-raspberrypi" >> start-vscode.sh
