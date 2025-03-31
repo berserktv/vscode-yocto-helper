@@ -843,3 +843,30 @@ start_elvees_skif() {
     )
     download_files "${DOWNLOAD_SKIF}/2024.06" "${IMAGE_SKIF_URL}" "${files[@]}"
 }
+
+start_elvees_skif_netboot() {
+    expect_script=$(mktemp)
+    cat << 'EOF' > "$expect_script"
+#!/usr/bin/expect -f
+set timeout -1
+set server_ip [lindex $argv 0];
+spawn picocom --baud 115200 /dev/ttyUSB0
+
+expect {
+    "Hit any key to stop autoboot" {
+        send " \r"
+        exp_continue
+    }
+    "=>" {
+        send "setenv serverip $server_ip\r"
+        send "run bootcmd_pxe\r"
+        exp_continue
+    }
+    eof
+    timeout
+}
+EOF
+    chmod +x "$expect_script"
+    "$expect_script" "${IP_TFTP}"
+    rm -f "$expect_script"
+}
