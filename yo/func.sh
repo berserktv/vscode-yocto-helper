@@ -42,6 +42,7 @@ DOWNLOAD_DIR="$HOME/distrib"
 DOWNLOAD_RASPIOS="${DOWNLOAD_DIR}/raspios"
 DOWNLOAD_UBUNTU="${DOWNLOAD_DIR}/ubuntu"
 DOWNLOAD_KALI="${DOWNLOAD_DIR}/kali"
+DOWNLOAD_SKIF="${DOWNLOAD_DIR}/skif"
 CMDLINE_RPI4="docker/dhcp_tftp_nfs/rpi/cmdline.txt"
 ENABLE_UART_RPI4="docker/dhcp_tftp_nfs/rpi/enable_uart.txt"
 MENU_ITEM_UBUNTU="docker/dhcp_tftp_nfs/ubuntu/menu_item_to_pxe.txt"
@@ -613,16 +614,16 @@ clean_tmp_mount_dir() {
     [[ -d "${dir_path}" ]] || { echo "Not a directory ${dir_path}"; return 2; }
     [[ "${dir_path}" == "${prefix}" ]] && { rm -r "${dir_path}"; return 0; }
 
-        if [ -L "${dir_path}" ]; then
+    if [ -L "${dir_path}" ]; then
         rm "${dir_path}"
-        else
+    else
         local abs_path=$(realpath "$dir_path" 2>/dev/null)
         [[ "${abs_path}" != "${prefix}"/* ]] && { echo "error: Dir $abs_path is outside"; return 3; }
 
         if [[ "$(stat -c %u "$abs_path")" -eq 0 ]]; then
             echo "dir => $abs_path owned by root: sudo rm -r ${abs_path}"
             sudo rm -r "${abs_path}"
-            else
+        else
             rm -r "${abs_path}"
         fi
     fi
@@ -808,7 +809,6 @@ restore_image_rpi4() {
 
 mount_raw_kali() {
     IMAGE_DIR="${DOWNLOAD_KALI}"
-    IMAGE_NAME="kali-linux-2024.4-installer-amd64.iso"
     MOUNT_DIR="${DOWNLOAD_KALI}/tmp_mount"
     download_kali || return 1
     download_netboot_kali || return 2
@@ -832,4 +832,14 @@ start_kali_24_4() {
     DOCKER_DIR='docker/dhcp_tftp_nfs'
     stop_docker "dhcp_tftp_nfs:buster-slim"
     mount_raw_kali && start_session_docker
+}
+
+start_elvees_skif() {
+    IMAGE_SKIF_URL="https://dist.elvees.com/mcom03/buildroot/2024.06/linux510/images"
+    local files=(
+        "Image"
+        "rootfs.tar.gz"
+        "elvees/mcom03-elvmc03smarc-r1.0-elvsmarccb-r3.2.1.dtb"
+    )
+    download_files "${DOWNLOAD_SKIF}/2024.06" "${IMAGE_SKIF_URL}" "${files[@]}"
 }
