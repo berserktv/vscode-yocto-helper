@@ -36,6 +36,18 @@
                 "command": "cd .vscode/yo; source func.sh; start_netboot_rpi4",
             },
             {
+                "name": "StartElveesSkif-24.06",
+                "singleInstance": true,
+                "color": "#00008b",
+                "command": "cd .vscode/yo; source func.sh; start_elvees_skif_24_06",
+            },
+            {
+                "name": "Elvees🖲Netboot",
+                "singleInstance": true,
+                "color": "#000000",
+                "command": "cd .vscode/yo; source func.sh; start_elvees_skif_netboot",
+            },
+            {
                 "name": "sshfsMount",
                 "singleInstance": true,
                 "color": "#007fff",
