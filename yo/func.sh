@@ -46,6 +46,7 @@ DOWNLOAD_SKIF="${DOWNLOAD_DIR}/skif"
 CMDLINE_RPI4="docker/dhcp_tftp_nfs/rpi/cmdline.txt"
 ENABLE_UART_RPI4="docker/dhcp_tftp_nfs/rpi/enable_uart.txt"
 MENU_ITEM_UBUNTU="docker/dhcp_tftp_nfs/ubuntu/menu_item_to_pxe.txt"
+MENU_ITEM_SKIF="docker/dhcp_tftp_nfs/skif/menu_item_to_pxe.txt"
 
 # общие функции для работы с IDE vscode
 gen_send_ssh_key() {
@@ -525,7 +526,6 @@ download_netboot() {
     [[ $? -ne 0 ]] && return 1
     [[ -d "${netboot}" ]] && { echo "dir ${netboot} already exists, skipping ..."; return 0; }
 
-    mkdir -p "${netboot}"
     extract_tar_archive "${download}/${file}" "${netboot}"
     local ret=$?
     [[ $ret -ne 0 ]] && return 2
@@ -565,6 +565,9 @@ add_menu_item_netboot() {
     fi
     if cat "${target_file}" | grep -q "IMAGE_NAME"; then
         sed -i "s|IMAGE_NAME|${IMAGE_NAME_SHORT}|g" "${target_file}"
+    fi
+    if cat "${target_file}" | grep -q "IMAGE_DTB"; then
+        sed -i "s|IMAGE_DTB|${IMAGE_DTB}|g" "${target_file}"
     fi
     sed -i "s|timeout 0|timeout 50|" "${target_file}"
 }
@@ -685,9 +688,19 @@ extract_tar_archive() {
     local out_dir="$2"
     mkdir -p "$out_dir"
 
-    tar -xzf "$archive" -C "$out_dir"
-    [[ $? -ne 0 ]] && { echo "Error: tar -xzf $archive -C $out_dir"; return 1; }
-    echo "Success! tar -xzf $archive -C $out_dir"
+    local info="tar -xzf $archive -C $out_dir"
+    if [ "$3" == "sudo" ]; then
+        echo "The archive will be unpacked as the administrator,"
+        echo "rootfs on NFS must be launched with the correct root permissions:"
+        info="sudo ${info}"
+        echo "${info}"
+        sudo tar -xzf "$archive" -C "$out_dir"
+    else
+        tar -xzf "$archive" -C "$out_dir"
+    fi
+
+    [[ $? -ne 0 ]] && { echo "Error: ${info}"; return 1; }
+    echo "Success! ${info}"
 }
 
 delete_image_bz2() {
@@ -834,14 +847,32 @@ start_kali_24_4() {
     mount_raw_kali && start_session_docker
 }
 
-start_elvees_skif() {
+start_elvees_skif_24_06() {
     IMAGE_SKIF_URL="https://dist.elvees.com/mcom03/buildroot/2024.06/linux510/images"
+    IMAGE_DIR="${DOWNLOAD_SKIF}/2024.06"
     local files=(
         "Image"
         "rootfs.tar.gz"
         "elvees/mcom03-elvmc03smarc-r1.0-elvsmarccb-r3.2.1.dtb"
     )
-    download_files "${DOWNLOAD_SKIF}/2024.06" "${IMAGE_SKIF_URL}" "${files[@]}"
+    IMAGE_DTB="${files[2]}"
+    IMAGE_NAME_SHORT="empty"
+    download_files "${IMAGE_DIR}" "${IMAGE_SKIF_URL}" "${files[@]}" || return 1
+
+    local nfs_dir="${DOCKER_DIR_MOUNT}/nfs"
+    clean_tmp_mount_dir "${nfs_dir}"
+    extract_tar_archive "${IMAGE_DIR}/${files[1]}" "${nfs_dir}" "sudo" || return 2
+
+    mkdir -p "${IMAGE_DIR}/pxelinux.cfg"
+    local pxe_default="${IMAGE_DIR}/pxelinux.cfg/default"
+    touch "${pxe_default}.orig"
+    add_menu_item_netboot "${pxe_default}" "${MENU_ITEM_SKIF}"
+    docker_dhcp_tftp_reconfig_net
+    create_mount_point_for_docker "tftp" "${IMAGE_DIR}"
+
+    stop_docker "dhcp_tftp_nfs:buster-slim"
+    DOCKER_DIR='docker/dhcp_tftp_nfs'
+    start_session_docker
 }
 
 start_elvees_skif_netboot() {
@@ -861,6 +892,11 @@ expect {
         send "setenv serverip $server_ip\r"
         send "run bootcmd_pxe\r"
         exp_continue
+    }
+    "login:" {
+        sleep 0.5
+        interact
+        exit 0
     }
     eof
     timeout
