@@ -26,19 +26,25 @@
             {
                 "name": "core-image-minimal",
                 "singleInstance": true,
-                "color": "#007fff",
+                "color": "#0000ff",
                 "command": "cd .vscode/yo; ./build_image.sh 'bitbake core-image-minimal'",
             },
             {
                 "name": "SDcardDeploy",
                 "singleInstance": true,
-                "color": "#007fff",
+                "color": "#0000ff",
                 "command": "cd .vscode/yo; ./sdcard_deploy.sh",
+            },
+            {
+                "name": "Build🖲Elvees",
+                "singleInstance": true,
+                "color": "#007fff",
+                "command": "cd .vscode/yo; source func.sh; build_elvees_skif_24_06",
             },
             {
                 "name": "Uart",
                 "singleInstance": true,
-                "color": "#007fff",
+                "color": "#0000ff",
                 "command": "sudo picocom --baud 115200 /dev/ttyUSB0",
             },
             {

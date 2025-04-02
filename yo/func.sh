@@ -847,6 +847,22 @@ start_kali_24_4() {
     mount_raw_kali && start_session_docker
 }
 
+build_elvees_skif_24_06() {
+    BUILD_DIR="${DOWNLOAD_SKIF}/mcom03-defconfig-src"
+    local download="${DOWNLOAD_SKIF}"
+    local base_url="https://dist.elvees.com/mcom03/buildroot/2024.06/linux510"
+    local file="mcom03-defconfig-src.tar.gz"
+    if [ ! -d "${BUILD_DIR}" ]; then
+        download_files "${download}" "${base_url}" "${file}" || return 1
+        extract_tar_archive "${download}/${file}" "${download}" || return 2
+    fi
+    [[ -d "${BUILD_DIR}" ]] || { echo "Build dir ${BUILD_DIR} => not found for Skif board, exiting ..."; return 1; }
+    cd "${BUILD_DIR}"
+    export DOCKERFILE=Dockerfile.centos8stream; export ENABLE_NETWORK=1; ./docker-build.sh make mcom03_defconfig
+    ./docker-build.sh make
+    cd ${CURDIR}
+}
+
 start_elvees_skif_24_06() {
     IMAGE_SKIF_URL="https://dist.elvees.com/mcom03/buildroot/2024.06/linux510/images"
     IMAGE_DIR="${DOWNLOAD_SKIF}/2024.06"
