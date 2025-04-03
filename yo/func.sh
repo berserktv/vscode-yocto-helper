@@ -847,8 +847,8 @@ start_kali_24_4() {
     mount_raw_kali && start_session_docker
 }
 
+BUILD_DIR="${DOWNLOAD_SKIF}/mcom03-defconfig-src"
 build_elvees_skif_24_06() {
-    BUILD_DIR="${DOWNLOAD_SKIF}/mcom03-defconfig-src"
     local download="${DOWNLOAD_SKIF}"
     local base_url="https://dist.elvees.com/mcom03/buildroot/2024.06/linux510"
     local file="mcom03-defconfig-src.tar.gz"
@@ -864,8 +864,6 @@ build_elvees_skif_24_06() {
 }
 
 start_elvees_skif_24_06() {
-    IMAGE_SKIF_URL="https://dist.elvees.com/mcom03/buildroot/2024.06/linux510/images"
-    IMAGE_DIR="${DOWNLOAD_SKIF}/2024.06"
     local files=(
         "Image"
         "rootfs.tar.gz"
@@ -873,11 +871,23 @@ start_elvees_skif_24_06() {
     )
     IMAGE_DTB="${files[2]}"
     IMAGE_NAME_SHORT="empty"
-    download_files "${IMAGE_DIR}" "${IMAGE_SKIF_URL}" "${files[@]}" || return 1
-
+    IMAGE_DIR="${BUILD_DIR}/buildroot/output/images"
+    local dtb="${IMAGE_DIR}/${IMAGE_DTB}"
+    local kernel="${IMAGE_DIR}/${files[0]}"
+    local rootfs="${IMAGE_DIR}/${files[1]}"
     local nfs_dir="${DOCKER_DIR_MOUNT}/nfs"
     clean_tmp_mount_dir "${nfs_dir}"
-    extract_tar_archive "${IMAGE_DIR}/${files[1]}" "${nfs_dir}" "sudo" || return 2
+
+    if [[ -f "${dtb}" && -f "${kernel}" && -f "${rootfs}"  ]]; then
+        echo "The version build from source code is loaded: ${IMAGE_DIR}"
+        extract_tar_archive "${rootfs}" "${nfs_dir}" "sudo" || return 1
+    else
+        IMAGE_DIR="${DOWNLOAD_SKIF}/2024.06"
+        echo "The version will be downloaded: ${IMAGE_DIR}"
+        IMAGE_SKIF_URL="https://dist.elvees.com/mcom03/buildroot/2024.06/linux510/images"
+        download_files "${IMAGE_DIR}" "${IMAGE_SKIF_URL}" "${files[@]}" || return 2
+        extract_tar_archive "${IMAGE_DIR}/${files[1]}" "${nfs_dir}" "sudo" || return 3
+    fi
 
     mkdir -p "${IMAGE_DIR}/pxelinux.cfg"
     local pxe_default="${IMAGE_DIR}/pxelinux.cfg/default"
