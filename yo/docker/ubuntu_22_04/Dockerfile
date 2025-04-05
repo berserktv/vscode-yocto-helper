@@ -21,8 +21,8 @@ ENV LANGUAGE ru_RU.UTF-8
  
 # Устанавливаю зависимости Yocto Project
 RUN	apt -y install \
-	gawk wget git-core diffstat unzip texinfo gcc-multilib \
-    build-essential chrpath socat libsdl1.2-dev xterm
+    gawk wget git-core diffstat unzip texinfo gcc-multilib \
+    build-essential chrpath socat libsdl1.2-dev xterm cpio lz4 zstd
 
 RUN echo 'root:docker' | chpasswd
 
