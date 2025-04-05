@@ -21,10 +21,10 @@ run_detach:
 	--mount type=bind,source=${YO_R},target=${PUB} -d -t ${IMAGE}
 
 build:
-	docker build -f Dockerfile --tag ${IMAGE} ..
+	docker build -f Dockerfile --tag ${IMAGE} .
 
 rebuild:
-	docker build -f Dockerfile --no-cache --tag ${IMAGE} ..
+	docker build -f Dockerfile --no-cache --tag ${IMAGE} .
 	
 install:
 	sudo apt-get update
