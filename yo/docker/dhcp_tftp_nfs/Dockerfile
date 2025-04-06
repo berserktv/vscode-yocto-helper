@@ -5,6 +5,7 @@ ENV DEBCONF_NONINTERACTIVE_SEEN true
 
 RUN apt-get update && \
     apt-get install --no-install-recommends -y \
+        lsof procps net-tools \
         isc-dhcp-server \
         tftpd-hpa \
         rpcbind \
@@ -22,14 +23,9 @@ RUN apt-get update && \
     touch /var/lib/nfs/state
     
 # ALEX debug    
-#RUN apt-get install -y net-tools
 #RUN apt-get install -y rsyslog
-#RUN apt-get install -y lsof procps
 
 WORKDIR /
-
-VOLUME ["/etc/dhcp"]
-VOLUME ["/etc/default"]
 
 COPY entrypoint.sh /entrypoint.sh
 # Set correct entrypoint permission
