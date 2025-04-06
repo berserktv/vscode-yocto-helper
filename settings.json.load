@@ -30,6 +30,12 @@
                 "command": "cd .vscode/yo; source func.sh; start_ubuntu_24_04",
             },
             {
+                "name": "StartRaspbian-2024-11",
+                "singleInstance": true,
+                "color": "#00008b",
+                "command": "cd .vscode/yo; source func.sh; start_netboot_raspios",
+            },
+            {
                 "name": "StartNetbootDemoRpi4",
                 "singleInstance": true,
                 "color": "#00008b",
@@ -48,13 +54,7 @@
                 "command": "cd .vscode/yo; source func.sh; start_elvees_skif_netboot",
             },
             {
-                "name": "sshfsMount",
-                "singleInstance": true,
-                "color": "#007fff",
-                "command": "mkdir /tmp/tmp_etc; sshfs user@192.168.0.1:/etc /tmp/tmp_etc",
-            },
-            {
-                "name": "💻 🖲 📶 ⌨ 💾 📕 📤 📥 ✅ ❌ ❎ ☐ ☑ 🗳 🔧 ⚙",
+                "name": "💻 🖲 📶 ⌨ 💾 📕 📤 📥 🛠️ 🚀 ✅ ❌ ❎ ☐ ☑ 🗳 🔧 ⚙",
                 "singleInstance": true,
                 "color": "#007fff",
                 "command": "echo symbols_graph_utf_8",

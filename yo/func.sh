@@ -113,13 +113,13 @@ start_cmd_docker() {
     check_build_dir_exist
     [[ $? -eq 2 ]] && return 2
 
-    cd $DOCKER_DIR
+    cd $DOCKER_DIR && make build
     if ! find_docker_id; then
-        make build && make run_detach
+        make run_detach
         if ! find_docker_id; then
             echo "failed to start container => make run_detach ..."
             cd "${CURDIR}"
-            return 2;
+            return 3;
         fi
     fi
 
@@ -473,6 +473,28 @@ add_cmdline_for_nfs_raspios() {
     fi
 }
 
+disable_partuuid_fstab_for_raspios() {
+    local fstab_file="${MOUNT_BASE_DIR}/part2/etc/fstab"
+    [[ -f "${fstab_file}" ]] || return 1
+
+    if cat "${fstab_file}" | grep -q "^PARTUUID="; then
+        echo "Disable the PARTUUID entries in ${fstab_file}"
+        echo "This is an NFS root filesystem for RaspiOS, and the root password is required."
+        sudo sed -i "s|^PARTUUID=|#PARTUUID=|g" "${fstab_file}"
+    fi
+}
+
+restore_partuuid_fstab_for_raspios() {
+    local fstab_file="${MOUNT_BASE_DIR}/part2/etc/fstab"
+    [[ -f "${fstab_file}" ]] || return 1
+
+    if cat "${fstab_file}" | grep -q "^#PARTUUID="; then
+        echo "Need to restore the PARTUUID entries in ${fstab_file}"
+        echo "This is an NFS root filesystem for RaspiOS, and the root password is required."
+        sudo sed -i "s|^#PARTUUID=|PARTUUID=|g" "${fstab_file}"
+    fi
+}
+
 change_bootloader_name_in_dhcp() {
     [[ -n "$1" ]] || { echo "arg1: bootloader type is missing. Use 'raspberry' or 'pxe'"; return 1; }
     local name_loader
@@ -492,13 +514,14 @@ change_bootloader_name_in_dhcp() {
 }
 
 mount_raw_raspios() {
-    IMAGE_DIR="${DOWNLOAD_RASPIOS}"
-    IMAGE_NAME="2024-11-19-raspios-bookworm-arm64.img"
-    MOUNT_DIR="${DOWNLOAD_RASPIOS}/tmp_mount"
-    download_raspios
-    mount_raw_image
+    download_raspios || return 1
+    mount_raw_image || return 2
     add_cmdline_for_nfs_raspios
+    disable_partuuid_fstab_for_raspios
+    docker_dhcp_tftp_reconfig_net
     change_bootloader_name_in_dhcp "raspberry"
+    create_mount_point_for_docker "tftp" "${MOUNT_BASE_DIR}/part1"
+    create_mount_point_for_docker "nfs" "${MOUNT_BASE_DIR}/part2"
 }
 
 download_ubuntu() {
@@ -771,9 +794,22 @@ example_yocto_demo_minimal_rpi4() {
 }
 
 start_netboot_rpi4() {
-    mount_raw_rpi4
     DOCKER_DIR='docker/dhcp_tftp_nfs'
-    start_session_docker
+    stop_docker "dhcp_tftp_nfs:buster-slim"
+    mount_raw_rpi4 && start_session_docker
+}
+
+set_env_raw_raspios() {
+    IMAGE_DIR="${DOWNLOAD_RASPIOS}"
+    IMAGE_NAME="2024-11-19-raspios-bookworm-arm64.img"
+    MOUNT_DIR="${DOWNLOAD_RASPIOS}/tmp_mount"
+    DOCKER_DIR='docker/dhcp_tftp_nfs'
+}
+
+start_netboot_raspios() {
+    set_env_raw_raspios
+    stop_docker "dhcp_tftp_nfs:buster-slim"
+    mount_raw_raspios && start_session_docker
 }
 
 stop_docker() {
@@ -820,6 +856,18 @@ restore_image_rpi4() {
     umount_raw_image
 }
 
+restore_image_raspios() {
+    set_env_raw_raspios
+    mount_raw_image
+    local mount_dir="${MOUNT_BASE_DIR}/part1"
+    for file in config.txt cmdline.txt; do
+        restore_orig "${mount_dir}/${file}"
+    done
+    restore_partuuid_fstab_for_raspios
+    umount_raw_image
+}
+
+
 mount_raw_kali() {
     IMAGE_DIR="${DOWNLOAD_KALI}"
     MOUNT_DIR="${DOWNLOAD_KALI}/tmp_mount"
@@ -841,6 +889,7 @@ mount_raw_kali() {
 
 start_kali_24_4() {
     IMAGE_NAME="kali-linux-2024.4-installer-amd64.iso"
+    #IMAGE_NAME="kali-linux-2024.4-live-amd64.iso"
     IMAGE_KALI_URL="https://cdimage.kali.org/kali-2024.4"
     DOCKER_DIR='docker/dhcp_tftp_nfs'
     stop_docker "dhcp_tftp_nfs:buster-slim"
@@ -858,7 +907,8 @@ build_elvees_skif_24_06() {
     fi
     [[ -d "${BUILD_DIR}" ]] || { echo "Build dir ${BUILD_DIR} => not found for Skif board, exiting ..."; return 1; }
     cd "${BUILD_DIR}"
-    export DOCKERFILE=Dockerfile.centos8stream; export ENABLE_NETWORK=1; ./docker-build.sh make mcom03_defconfig
+    export DOCKERFILE=Dockerfile.centos8stream; export ENABLE_NETWORK=1; 
+    ./docker-build.sh make mcom03_defconfig
     ./docker-build.sh make
     cd ${CURDIR}
 }
