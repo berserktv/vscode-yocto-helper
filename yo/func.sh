@@ -35,13 +35,11 @@ CONTAINER_NAME=""
 IMAGE_NAME=""
 IMAGE_DIR=""
 IMAGE_SEL=""
-IMAGE_KALI_URL=""
-IMAGE_UBUNTU_URL=""
 MOUNT_DIR=""
+IMAGE_UBUNTU_URL=""
 DOWNLOAD_DIR="$HOME/distrib"
 DOWNLOAD_RASPIOS="${DOWNLOAD_DIR}/raspios"
 DOWNLOAD_UBUNTU="${DOWNLOAD_DIR}/ubuntu"
-DOWNLOAD_KALI="${DOWNLOAD_DIR}/kali"
 DOWNLOAD_SKIF="${DOWNLOAD_DIR}/skif"
 CMDLINE_RPI4="docker/dhcp_tftp_nfs/rpi/cmdline.txt"
 ENABLE_UART_RPI4="docker/dhcp_tftp_nfs/rpi/enable_uart.txt"
@@ -531,13 +529,6 @@ download_ubuntu() {
     return $?
 }
 
-download_kali() {
-    if [ -z "${IMAGE_NAME}" ]; then echo "Error: Set environment variables IMAGE_NAME, exit"; return 1; fi
-    mkdir -p "${DOWNLOAD_KALI}"
-    download_files "${DOWNLOAD_KALI}" "${IMAGE_KALI_URL}" "${IMAGE_NAME}"
-    return $?
-}
-
 download_netboot() {
     local download="$1"
     local base_url="$2"
@@ -561,13 +552,6 @@ download_netboot() {
 download_netboot_ubuntu() {
     local download_dir="${DOWNLOAD_UBUNTU}"
     local base_url="http://archive.ubuntu.com/ubuntu/dists/bionic-updates/main/installer-amd64/current/images/netboot"
-    download_netboot "${download_dir}" "${base_url}"
-    return $?
-}
-
-download_netboot_kali() {
-    local download_dir="${DOWNLOAD_KALI}"
-    local base_url="https://http.kali.org/kali/dists/kali-rolling/main/installer-amd64/current/images/netboot"
     download_netboot "${download_dir}" "${base_url}"
     return $?
 }
@@ -865,35 +849,6 @@ restore_image_raspios() {
     done
     restore_partuuid_fstab_for_raspios
     umount_raw_image
-}
-
-
-mount_raw_kali() {
-    IMAGE_DIR="${DOWNLOAD_KALI}"
-    MOUNT_DIR="${DOWNLOAD_KALI}/tmp_mount"
-    download_kali || return 1
-    download_netboot_kali || return 2
-    mount_raw_image || return 3
-
-    local pxe_default="${DOWNLOAD_KALI}/netboot/pxelinux.cfg/default"
-    local kernel="${MOUNT_BASE_DIR}/part1/install.amd/vmlinuz"
-    local initrd="${MOUNT_BASE_DIR}/part1/install.amd/initrd.gz"
-    local netboot="${DOWNLOAD_KALI}/netboot"
-    add_menu_item_netboot "${pxe_default}" "${MENU_ITEM_UBUNTU}"
-    initrd_and_kernel_to_netboot "${kernel}" "${initrd}" "${netboot}"
-    docker_dhcp_tftp_reconfig_net
-    change_bootloader_name_in_dhcp "pxe"
-    create_mount_point_for_docker "tftp" "${netboot}"
-    create_mount_point_for_docker "nfs" "${MOUNT_BASE_DIR}/part1"
-}
-
-start_kali_24_4() {
-    IMAGE_NAME="kali-linux-2024.4-installer-amd64.iso"
-    #IMAGE_NAME="kali-linux-2024.4-live-amd64.iso"
-    IMAGE_KALI_URL="https://cdimage.kali.org/kali-2024.4"
-    DOCKER_DIR='docker/dhcp_tftp_nfs'
-    stop_docker "dhcp_tftp_nfs:buster-slim"
-    mount_raw_kali && start_session_docker
 }
 
 BUILD_DIR="${DOWNLOAD_SKIF}/mcom03-defconfig-src"
