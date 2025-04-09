@@ -54,12 +54,6 @@
                 "command": "cd .vscode/yo; source func.sh; start_elvees_skif_netboot",
             },
             {
-                "name": "💻 🖲 📶 ⌨ 💾 📕 📤 📥 🛠️ 🚀 ✅ ❌ ❎ ☐ ☑ 🗳 🔧 ⚙",
-                "singleInstance": true,
-                "color": "#007fff",
-                "command": "echo symbols_graph_utf_8",
-            },
-            {
                 "name": "Build ◀",
                 "singleInstance": true,
                 "color": "#000000",
