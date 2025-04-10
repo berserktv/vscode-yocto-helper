@@ -63,6 +63,14 @@ install_deepseek() {
 
 run_deepseek() { ollama run ${DEEPSEEK_MODEL}; }
 
+yocto_analyze_deepseek() {
+    local cmd_runs="$1"
+    DOCKER_DIR="docker/ubuntu_22_04"
+    CONTAINER_NAME="ubuntu_22_04"
+    cmd_init="cd /mnt/data; MACHINE=$YO_M source ./setup-environment build"
+    start_cmd_docker "${cmd_init}; ${cmd_runs}" | ollama run ${DEEPSEEK_MODEL} 'проведи анализ логов'
+}
+
 unistall_ollama() {
     #Remove the ollama service:
     sudo systemctl stop ollama
@@ -111,7 +119,7 @@ start_cmd_docker() {
     check_build_dir_exist
     [[ $? -eq 2 ]] && return 2
 
-    cd $DOCKER_DIR && make build
+    cd "${DOCKER_DIR}" && make build
     if ! find_docker_id; then
         make run_detach
         if ! find_docker_id; then

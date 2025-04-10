@@ -30,6 +30,12 @@
                 "command": "cd .vscode/yo; source func.sh; example_yocto_demo_minimal_rpi4",
             },
             {
+                "name": "InstallDeepSeek",
+                "singleInstance": true,
+                "color": "#ffffff",
+                "command": "cd .vscode/yo; source func.sh; install_deepseek",
+            },
+            {
                 "name": "Load ◀",
                 "singleInstance": true,
                 "color": "#ffffff",
