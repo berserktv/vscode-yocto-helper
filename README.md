@@ -1904,6 +1904,7 @@ curl -fsSL https://raw.githubusercontent.com/berserktv/vscode-yocto-helper/refs/
     mkdir vscode-yocto-helper
     cd vscode-yocto-helper
     git clone https://github.com/berserktv/vscode-yocto-helper.git .vscode
+    code .
 ```
 
 Примечание: на чистой системе установку пока не проверял.

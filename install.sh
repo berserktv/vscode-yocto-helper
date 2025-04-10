@@ -7,7 +7,7 @@ sudo snap install --classic code
 code --install-extension seunlanlege.action-buttons
 
 sudo apt-get update
-sudo apt install -y expect
+sudo apt install -y expect git
 sudo apt install -y docker.io
 
 # добавление пользователя в группу докер
