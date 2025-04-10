@@ -1,0 +1,22 @@
+#!/bin/bash
+
+DIR_INSTALL="$HOME/yocto/vscode-yocto-helper"
+
+sudo apt install -y snap
+sudo snap install --classic code
+code --install-extension seunlanlege.action-buttons
+
+sudo apt-get update
+sudo apt install -y expect
+sudo apt install -y docker.io
+
+mkdir -p "${DIR_INSTALL}"
+cd "${DIR_INSTALL}"
+git clone
+
+git clone https://github.com/berserktv/vscode-yocto-helper.git .vscode
+code .
+
+
+
+
