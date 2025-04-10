@@ -12,7 +12,6 @@ sudo apt install -y docker.io
 
 mkdir -p "${DIR_INSTALL}"
 cd "${DIR_INSTALL}"
-git clone
 
 git clone https://github.com/berserktv/vscode-yocto-helper.git .vscode
 code .
