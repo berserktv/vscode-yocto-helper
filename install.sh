@@ -10,6 +10,11 @@ sudo apt-get update
 sudo apt install -y expect
 sudo apt install -y docker.io
 
+# добавление пользователя в группу докер
+sudo usermod -aG docker $USER
+# применение группы или можно выйти из пользовательской сессии и войти зановог
+newgrp docker
+
 mkdir -p "${DIR_INSTALL}"
 cd "${DIR_INSTALL}"
 
