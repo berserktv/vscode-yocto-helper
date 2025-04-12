@@ -19,7 +19,7 @@ run:
 	sudo ip link set $(HOST_NET_IFACE) up
 	
 	sudo modprobe nfsd
-	sudo systemctl stop rpcbind.socket rpcbind || true
+	@sudo systemctl stop rpcbind.socket rpcbind > /dev/null 2>&1 || true
 
 	docker run --rm -ti --privileged \
 	${DOCKER_NETWORK} \
