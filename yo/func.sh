@@ -292,6 +292,7 @@ mount_raw_image() {
 
     local loop_dev=$(losetup -j "${image_file}" | awk -F: '{print $1}')
     if [ -z "${loop_dev}" ]; then
+        echo "sudo losetup -f --show -P ${image_file}"
         loop_dev=$(sudo losetup -f --show -P "${image_file}")
         if [[ $? -ne 0 ]]; then echo "Error: Failed to create loop device" >&2; return 3; fi
         echo "Created new loop device: ${loop_dev}"
@@ -314,6 +315,7 @@ mount_raw_image() {
             fi
 
             mkdir -p "${mount_point}"
+            echo "sudo blkid -o value -s TYPE ${partition}"
             local fs_type=$(sudo blkid -o value -s TYPE "${partition}")
             case "${fs_type}" in
                 vfat)
@@ -343,6 +345,7 @@ umount_raw_image() {
     if [[ -e "${mounted_parts[0]}" ]]; then
         for mount_point in "${mounted_parts[@]}"; do
             if mountpoint -q "${mount_point}"; then
+                echo "sudo umount ${mount_point}"
                 sudo umount "${mount_point}"
                 if [[ $? -eq 0 ]]; then echo "Successfully unmounted ${mount_point}"
                 else echo "Error: Failed to unmount ${mount_point}" >&2; fi
@@ -359,6 +362,7 @@ umount_raw_image() {
         local loop_devices
         loop_devices=$(losetup -j "${image_file}" | awk -F: '{print $1}')
         for loop_dev in ${loop_devices}; do
+            echo "sudo losetup -d ${loop_dev}"
             sudo losetup -d "${loop_dev}"
             if [[ $? -eq 0 ]]; then echo "Successfully detached loop device ${loop_dev}"
             else echo "Error: Failed to detach loop device ${loop_dev}" >&2; fi
