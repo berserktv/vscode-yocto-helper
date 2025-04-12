@@ -7,11 +7,11 @@ sudo snap install --classic code
 code --install-extension seunlanlege.action-buttons
 
 sudo apt-get update
-sudo apt install -y expect git repo
+sudo apt install -y expect git repo make
 sudo apt install -y docker.io
 
 sudo usermod -aG docker $USER
-newgrp docker
+exec su - $USER
 
 mkdir -p "${DIR_INSTALL}"
 cd "${DIR_INSTALL}"
