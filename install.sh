@@ -11,6 +11,7 @@ sudo apt install -y expect git repo make
 sudo apt install -y docker.io
 
 sudo usermod -aG docker $USER
+sudo usermod -aG dialout $USER
 exec su - $USER
 
 mkdir -p "${DIR_INSTALL}"
