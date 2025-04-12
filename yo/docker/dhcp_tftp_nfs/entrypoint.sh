@@ -25,7 +25,7 @@ start()
     echo "Starting services..."
     echo "DHCP init..."
     #debug isc: /usr/sbin/dhcpd -4 -d -cf /etc/dhcp/dhcpd.conf
-    service rsyslog start
+    #debug service rsyslog start
     service isc-dhcp-server start
     echo "TFTP init..."
     #debug tftpp: /usr/sbin/in.tftpd -L -vvv --secure /tftpboot &
