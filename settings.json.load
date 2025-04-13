@@ -30,10 +30,10 @@
                 "command": "cd .vscode/yo; source func.sh; run_deepseek",
             },
             {
-                "name": "StartUbuntu-24.04",
+                "name": "StartUbuntu-22.04",
                 "singleInstance": true,
                 "color": "#00008b",
-                "command": "cd .vscode/yo; source func.sh; start_ubuntu_24_04",
+                "command": "cd .vscode/yo; source func.sh; start_ubuntu_22_04",
             },
             {
                 "name": "StartRaspbian-2024-11",

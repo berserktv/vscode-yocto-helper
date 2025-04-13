@@ -1544,9 +1544,9 @@ yocto_analyze_deepseek() {
 Итак код верхнего уровня, который запускает загрузку по сети:
 
 ```lua
-start_ubuntu_24_04() {
-  IMAGE_NAME="ubuntu-24.04.2-desktop-amd64.iso"
-  IMAGE_UBUNTU_URL="http://releases.ubuntu.com/24.04.2"
+start_ubuntu_22_04() {
+  IMAGE_NAME="ubuntu-22.04.1-desktop-amd64.iso"
+  IMAGE_UBUNTU_URL="http://releases.ubuntu.com/22.04.2"
   DOCKER_DIR='docker/dhcp_tftp_nfs'
   stop_docker "dhcp_tftp_nfs:buster-slim"
   mount_raw_ubuntu && start_session_docker
