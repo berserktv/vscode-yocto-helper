@@ -752,6 +752,7 @@ mount_raw_rpi4() {
     if ! set_env_raw_rpi4; then return 1; fi
 
     mount_raw_image
+    docker_dhcp_tftp_reconfig_net
     change_bootloader_name_in_dhcp "raspberry"
     raspberry_pi4_cmdline_for_nfs "${MOUNT_BASE_DIR}/part1"
     create_mount_point_for_docker "tftp" "${MOUNT_BASE_DIR}/part1"
