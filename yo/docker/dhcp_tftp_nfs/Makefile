@@ -13,10 +13,14 @@ IP_MASK2="24"
 IP_RANGE="range 10.0.7.100 10.0.7.200"
 
 run:
-	#sudo nmcli connection add type ethernet ifname $(HOST_NET_IFACE) ip4 $(IP_ADDR)/$(IP_MASK2) autoconnect yes
-	sudo ip addr flush dev $(HOST_NET_IFACE)
-	sudo ip addr add $(IP_ADDR)/$(IP_MASK) dev $(HOST_NET_IFACE)
-	sudo ip link set $(HOST_NET_IFACE) up
+	sudo nmcli connection delete "static-host-net" >/dev/null 2>&1 || true
+	sudo nmcli connection add type ethernet con-name "static-host-net" \
+		ifname ${HOST_NET_IFACE} ipv4.address ${IP_ADDR}/${IP_MASK2} \
+		ipv4.method manual connection.autoconnect yes
+	sudo nmcli connection up "static-host-net"
+	#sudo ip addr flush dev $(HOST_NET_IFACE)
+	#sudo ip addr add $(IP_ADDR)/$(IP_MASK) dev $(HOST_NET_IFACE)
+	#sudo ip link set $(HOST_NET_IFACE) up
 	
 	sudo modprobe nfsd
 	@sudo systemctl stop rpcbind.socket rpcbind > /dev/null 2>&1 || true
