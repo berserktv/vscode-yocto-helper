@@ -1005,12 +1005,14 @@ IP_MASK2="24"
 IP_RANGE="range 10.0.7.100 10.0.7.200"
 
 run:
-    sudo ip addr flush dev $(HOST_NET_IFACE)
-    sudo ip addr add $(IP_ADDR)/$(IP_MASK) dev $(HOST_NET_IFACE)
-    sudo ip link set $(HOST_NET_IFACE) up
+    sudo nmcli connection delete "static-host-net" >/dev/null 2>&1 || true
+    sudo nmcli connection add type ethernet con-name "static-host-net" \
+        ifname ${HOST_NET_IFACE} ipv4.address ${IP_ADDR}/${IP_MASK2} \
+        ipv4.method manual connection.autoconnect yes
+    sudo nmcli connection up "static-host-net"
 
     sudo modprobe nfsd
-    if ps aux | grep -q /sbin/rpcbind; then sudo systemctl stop rpcbind.socket; sudo systemctl stop rpcbind; fi
+    @sudo systemctl stop rpcbind.socket rpcbind > /dev/null 2>&1 || true
 
     docker run --rm -ti --privileged \
     ${DOCKER_NETWORK} \
@@ -1279,6 +1281,7 @@ mount_raw_rpi4() {
     if ! set_env_raw_rpi4; then return 1; fi
 
     mount_raw_image
+    docker_dhcp_tftp_reconfig_net
     change_bootloader_name_in_dhcp "raspberry"
     raspberry_pi4_cmdline_for_nfs "${MOUNT_BASE_DIR}/part1"
     create_mount_point_for_docker "tftp" "${MOUNT_BASE_DIR}/part1"
