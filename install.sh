@@ -18,8 +18,13 @@ cd "${DIR_INSTALL}"
 git clone https://github.com/berserktv/vscode-yocto-helper.git .vscode
 
 echo ""
-echo "Important: Changes to 'docker' group membership require a new login session."
-echo "Please completely log out and log back into your system to apply changes."
+echo "Important: Docker group changes require a new login session to take effect."
+echo "You must fully log out and log back in after installation!"
 echo ""
 echo "Project will be installed to: ${DIR_INSTALL}"
 echo ""
+
+read -p "Reboot system? (yes/no): " flag
+if [ "$flag" = "yes" ]; then
+    reboot
+fi
