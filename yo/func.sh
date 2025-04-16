@@ -45,6 +45,8 @@ CMDLINE_RPI4="docker/dhcp_tftp_nfs/rpi/cmdline.txt"
 ENABLE_UART_RPI4="docker/dhcp_tftp_nfs/rpi/enable_uart.txt"
 MENU_ITEM_UBUNTU="docker/dhcp_tftp_nfs/ubuntu/menu_item_to_pxe.txt"
 MENU_ITEM_SKIF="docker/dhcp_tftp_nfs/skif/menu_item_to_pxe.txt"
+# Repository of this project: https://github.com/berserktv/vscode-yocto-helper
+# This project is licensed under the MIT License. autor: Alexander Demachev. See the [LICENSE.MIT]
 
 # общие функции для работы с IDE vscode
 gen_send_ssh_key() {
