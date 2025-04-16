@@ -19,15 +19,15 @@ if [ "$flag" = "yes" ]; then
     sudo apt-get purge -y docker.io
     echo "Updating user groups..."
     sudo gpasswd -d "${USER}" docker
-    sudo gpasswd -d "${USER}" dialout
     echo "sudo groupdel docker"
     sudo groupdel docker
 fi
 
-read -p "Removing development tools: expect git repo make? (yes/no):" flag
+read -p "Removing development tools: expect git picocom make? (yes/no):" flag
 if [ "$flag" = "yes" ]; then
-    echo "sudo apt-get purge -y expect repo git make"
-    sudo apt-get purge -y expect repo git make
+    echo "sudo apt-get purge -y expect picocom git make"
+    sudo apt-get purge -y expect picocom git make
+    sudo gpasswd -d "${USER}" dialout
 fi
 
 read -p "Removing VSCode? (yes/no):" flag

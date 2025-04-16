@@ -1,13 +1,21 @@
 #!/bin/bash
 
 DIR_INSTALL="$HOME/yocto/vscode-yocto-helper"
+install_repo() {
+    sudo apt install -y repo && return 0
+
+    sudo curl -o /usr/local/bin/repo \
+         https://commondatastorage.googleapis.com/git-repo-downloads/repo \
+    && sudo chmod a+x /usr/local/bin/repo
+}
 
 sudo apt install -y snap || sudo apt install -y snapd
 sudo snap install --classic code
 code --install-extension seunlanlege.action-buttons
 
 sudo apt-get update
-sudo apt install -y expect git repo make
+install_repo
+sudo apt install -y expect git picocom make
 sudo apt install -y docker.io
 
 sudo usermod -aG docker $USER
