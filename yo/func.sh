@@ -824,6 +824,14 @@ start_ubuntu_22_04() {
     mount_raw_ubuntu && start_session_docker
 }
 
+start_ubuntu_20_04() {
+    IMAGE_NAME="ubuntu-20.04.6-desktop-amd64.iso"
+    IMAGE_UBUNTU_URL="http://releases.ubuntu.com/20.04"
+    DOCKER_DIR='docker/dhcp_tftp_nfs'
+    stop_docker "dhcp_tftp_nfs:buster-slim"
+    mount_raw_ubuntu && start_session_docker
+}
+
 save_orig() {
     local file="$1"
     local flag=0
