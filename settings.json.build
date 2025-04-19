@@ -36,6 +36,12 @@
                 "command": "cd .vscode/yo; ./sdcard_deploy.sh",
             },
             {
+                "name": "core-image-sato",
+                "singleInstance": true,
+                "color": "#0000ff",
+                "command": "cd .vscode/yo; ./build_image.sh 'bitbake core-image-sato'",
+            },
+            {
                 "name": "Build🖲Elvees",
                 "singleInstance": true,
                 "color": "#007fff",
