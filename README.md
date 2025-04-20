@@ -968,7 +968,6 @@ start()
 {
     echo "Запуск сервисов..."
     echo "Инициализация DHCP..."
-    service rsyslog start
     service isc-dhcp-server start
     echo "Инициализация TFTP..."
     service tftpd-hpa start
