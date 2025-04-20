@@ -1338,7 +1338,7 @@ sudo tcpdump -i eth0 -vvv -n "(port 67 or port 68) or (udp port 69)"
 * rootwait ожидает, пока корневая файловая система не будет готова.
 
 
-В самом начале функции `mount_raw_rpi41 идет инициализация переменных среды для выбора загружаемого образа:
+В самом начале функции `mount_raw_rpi4` идет инициализация переменных среды для выбора загружаемого образа:
 
 ```lua
 set_env_raw_rpi4() {
@@ -1547,9 +1547,9 @@ yocto_analyze_deepseek() {
 Итак код верхнего уровня, который запускает загрузку по сети:
 
 ```lua
-start_ubuntu_22_04() {
-  IMAGE_NAME="ubuntu-22.04.1-desktop-amd64.iso"
-  IMAGE_UBUNTU_URL="http://releases.ubuntu.com/22.04.2"
+start_ubuntu_24_04() {
+  IMAGE_NAME="ubuntu-24.04.2-desktop-amd64.iso"
+  IMAGE_UBUNTU_URL="http://releases.ubuntu.com/24.04.2"
   DOCKER_DIR='docker/dhcp_tftp_nfs'
   stop_docker "dhcp_tftp_nfs:buster-slim"
   mount_raw_ubuntu && start_session_docker
