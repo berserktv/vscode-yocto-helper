@@ -70,7 +70,14 @@ yocto_analyze_deepseek() {
     DOCKER_DIR="docker/ubuntu_22_04"
     CONTAINER_NAME="ubuntu_22_04"
     cmd_init="cd /mnt/data; MACHINE=$YO_M source ./setup-environment build"
-    start_cmd_docker "${cmd_init}; ${cmd_runs}" | ollama run ${DEEPSEEK_MODEL} 'проведи анализ логов'
+    start_cmd_docker "${cmd_init}; ${cmd_runs}" | ollama run ${DEEPSEEK_MODEL} 'analyze to check for errors'
+}
+yocto_analyze_deepseek_rus() {
+    local cmd_runs="$1"
+    DOCKER_DIR="docker/ubuntu_22_04"
+    CONTAINER_NAME="ubuntu_22_04"
+    cmd_init="cd /mnt/data; MACHINE=$YO_M source ./setup-environment build"
+    start_cmd_docker "${cmd_init}; ${cmd_runs}" | ollama run ${DEEPSEEK_MODEL} 'проведи анализ, есть ли ошибки'
 }
 
 unistall_ollama() {
@@ -405,6 +412,7 @@ download_files() {
         if [ -f "$file_path" ]; then echo "file $file_path already exists, skipping ...";
         else wget -P "$file_dir" "$url/$FILE" || { echo "Failed to download $FILE"; count_error=$((count_error+1)); }; fi
     done
+    sync
     return $count_error
 }
 

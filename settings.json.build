@@ -54,6 +54,12 @@
                 "command": "sudo picocom --baud 115200 /dev/ttyUSB0",
             },
             {
+                "name": "YoctoAnalyzeDeepseek",
+                "singleInstance": true,
+                "color": "#007fff",
+                "command": "cd .vscode/yo; source func.sh; yocto_analyze_deepseek_rus 'bitbake core-image-minimal'",
+            },
+            {
                 "name": "BUILD",
                 "singleInstance": true,
                 "color": "#000000",
