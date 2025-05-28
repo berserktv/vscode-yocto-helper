@@ -219,12 +219,13 @@ select_dd_info() {
     for i in $LI_DISK; do
         for image in $YO_IMAGE_NAME; do
             if [ $SEL == "$j" ]; then
-                mount | grep "^/dev/$i" | awk '{print $1}' | xargs -r sudo umount
                 if echo "$image" | grep -q "\.wic\.bz2"; then
                     echo "bzip2 -dc $image | sudo dd of=/dev/$i bs=1M"
+                    mount | grep "^/dev/$i" | awk '{print $1}' | xargs -r sudo umount
                     bzip2 -dc $image | sudo dd of=/dev/$i bs=1M; sync
                 else
                     echo "sudo dd if=$image of=/dev/$i bs=1M"
+                    mount | grep "^/dev/$i" | awk '{print $1}' | xargs -r sudo umount
                     sudo dd if=$image of=/dev/$i bs=1M; sync
                 fi
             fi
