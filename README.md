@@ -1,34 +1,41 @@
-# Причесываем VSCode до неприличной Yocto IDE или история одной кнопки
+# Polishing VSCode into an Indecently Good Yocto IDE: The Story of a Single Button
 
 ![](https://habrastorage.org/webt/0m/6i/xw/0m6ixw8xy0_7wdkr1xw1smlfui0.png)
 
-Идея написания этой статьи вдруг возникла у меня в начале 2025 года, когда я проснулся 2 января с тяжелой головой и вдруг понял что нужно сделать что то хорошее, что то хорошее для вас, как говорит моя дочь Маргарита «для тех кто в Интернете». Как минимум мне нужен компьютерный класс на Raspberry Pi4, ну или хотя бы ферма docker(ов).
+"Machine translation — oops!"  ([original](https://habr.com/ru/articles/899796/))
 
-Я обожаю Visual Studio Code, но мне всегда не хватает времени чтобы более детально разобраться в его огромной функциональности, в различных конфигурациях, тасках и launch(ах) описанных в формате json и я решил это обойти. По сути мне всегда не доставало нескольких пунктов меню, которые выполняют очень специфические функции, нужные мне в процессе сборки дистрибутива в системе Yocto Project для формирования встраиваемых (Embedded) прошивок.
+## The Idea Behind This Project
 
-Началось все с того, что нужное мне меню должно быть всегда под рукой, а лучшего места чем панель Status Bar в VSCode даже не придумать, ближе некуда и я начал искать какой нибудь плагин предоставляющий эту возможность. Статья из серии DockerFace.
+The idea for this project suddenly struck me in early 2025. On January 2nd, I woke up with a pounding headache and an unexpected realization: I needed to create something good—something good for you, as my daughter Margarita says, «for those on the Internet.» At the very least, I needed a Raspberry Pi 4 computer lab, or maybe even a Docker farm.
 
-Краткое содержание статьи:
-- Выбор и настройка плагина для VSCode
-- Запись Yocto образа на SD карту памяти
-- Сборка Yocto образа в Docker(е)
-- Прием Барона Мюнхгаузена для документирования bash
-- Запуск Yocto образа RPi под виртуальной машиной Qemu
-- Развертывание DemoMinimal образа из Yocto коробки
-- Выписываем Buster Slim(а) для крутой разборке в Докере
-- Настройка DHCP, TFTP и NFS сервера
-- Загрузка core-image-minimal (wic) образа на rpi4 по сети
-- Сетевая загрузка Raspbian для платы Raspberry Pi4
-- Побочный эффект сборки, загрузка ISO дистрибутива Ubuntu по сети
-- Автоматический анализ Yocto логов с помощью Deepseek
-- самая красивая кнопка для друзей Элвиса
-- встраиваем кнопки в VSCode паровозиком
+I adore Visual Studio Code, but I’ve never had enough time to fully explore its vast functionality—its configurations, tasks, and JSON-defined launch setups. So I decided to bypass that. What I’ve always missed are a few menu items performing highly specific functions I need while building Yocto Project distributions for embedded firmware.
 
-## Выбор плагина для VSCode
+It all started with the need to have my custom menu always within reach. The best spot? VSCode’s Status Bar—nothing comes closer. I began searching for a plugin offering this capability. This article is part of the DockerFace series.
 
-Плагин называется "VsCode Action Buttons" (seunlanlege.action-buttons), он делает именно то что мне и было нужно, позволяет прикрутить любой bash код по нажатию кнопки.
+**Table of Contents:**
 
-Первым делом необходимо установить как сам VSCode (если он у вас еще не установлен), так и сам плагин:
+- Selecting and configuring a VSCode plugin
+- Flashing a Yocto image to an SD card
+- Building Yocto images in Docker
+- Using the "Baron Munchausen Method" for Bash documentation
+- Running Yocto RPi images in QEMU virtual machines
+- Deploying the DemoMinimal image from Yocto’s reference setup
+- Dishing Out Buster Slim for an Ultimate Docker Breakdown
+- Configuring DHCP, TFTP, and NFS servers
+- Network-booting a core-image-minimal (wic) image on RPi4
+- Network-booting Raspbian for Raspberry Pi 4
+- Bonus: Network-booting Ubuntu ISO images
+- Automated Yocto log analysis with DeepSeek
+- "The most beautiful button for Elvis’ friends"
+- Embedding buttons like a train in VSCode’s Status Bar
+
+
+## VSCode Plugin Selection
+
+The plugin is called "VsCode Action Buttons" (seunlanlege.action-buttons). It does exactly what I needed – it allows you to attach/execute any bash code with a button click.
+
+First of all, you need to install both VSCode itself (if you don't have it installed yet) and the plugin itself:
+
 
 ```bash
 sudo apt install -y snap
@@ -36,10 +43,11 @@ sudo snap install --classic code
 code --install-extension seunlanlege.action-buttons
 ```
 
-Настройки плагина добавляются в `.vscode/settings.json` и вызов shell скрипта, выглядит так:
+Plugin settings are added to `.vscode/settings.json` and the shell script call looks like this:
 
 ```json
-...
+   
+   ...
 "actionButtons": {
     "reloadButton": null,
     "loadNpmCommands": false,
@@ -60,17 +68,17 @@ code --install-extension seunlanlege.action-buttons
 }
 ```
 
-Примечание: в моем случае это bash код, но запускаемый код может быть и на любом другом языке, можно и просто исполняемый бинарный файл запустить, кому как нравиться.
+Note: In this example it's bash code, but the executable can be in any language — you could even run a plain binary executable, whatever suits one's needs.
 
 
-## Запись Yocto образа на карту памяти
+## Writing a Yocto Image to an SD Card
 
-Первым делом в Yocto мне нужно было записать результат сборки на карту памяти microSDHC подключенную с помощью картридера. Эта SD карта в дальнейшем вставляется в одноплатный компьютер, например Raspberry Pi 4, и плата с нее загружается.
+First in Yocto, I needed to flash the build output to a microSD card using a card reader. This SD card is then inserted into a single-board computer like a Raspberry Pi 4, and the board boots from it.
 
-Вся необходимая мне функциональность находится в одном общем файле `.vscode/yo/func.sh`
-и запускать функции я буду оттуда.
+All required functionality resides in a shared file `.vscode/yo/func.sh`
+and I'll be executing functions from there.
 
-Итак вначале мне нужно найти список возможных файлов образов, для записи на карту SD, название целевой платформы YO_M берется из основного конфигурационного файла "build/conf/local.conf", расширение файла для записи командой dd содержится в переменной `YO_EXT`.
+So initially, I need to find the list of possible image files for SD card flashing. The target platform name `YO_M` is sourced from the main configuration file "build/conf/local.conf", while the file extension for dd-command flashing is stored in the `YO_EXT` variable.
 
 ```bash
 YO_EXT=".wic .rootfs.wic .rootfs.wic.bz2 .rpi-sdimg .wic.bz2"
@@ -96,9 +104,9 @@ find_name_image() {
 }
 ```
 
-Результат работы функции `find_name_image` будет содержаться в строковой переменной `YO_IMAGE_NAME`, названия найденных образов разделены пробелами.
+The result of the `find_name_image` function will be stored in the string variable `YO_IMAGE_NAME`, with the names of found images separated by spaces.
 
-Далее мне необходимо найти SD карту подключенную через usb или картридер, формируется очень удобный табличный формат вывода, который позволяет убедиться что выбрано именно то устройство, которое нужно, так как после записи командой dd все текущие данные удаляются и тут главное не ошибиться.
+Next, I need to locate the SD card connected via USB or card reader. A highly convenient table-formatted output is generated, allowing me to verify that exactly the correct device is selected. This is critical because after flashing with the dd command, all existing data is erased - making accuracy essential here.
 
 ```bash
 find_sd_card() {
@@ -131,11 +139,11 @@ find_sd_card() {
 }
 ```
 
-Все найденные возможные носители содержаться в переменной `LI_DISK` и в функции `select_dd_info` предлагается список пунктов от 1 до N, возможная комбинация варианта команды dd для образа и диска.
+All found storage devices are stored in the variable `LI_DISK`, and the function `select_dd_info` presents a list of options numbered from 1 to N, representing possible combinations of the dd command for the image and disk.
 
-Для записи нужно выбрать то что вы хотите записать, ввести номер и нажать ввод, запись осуществляется с помощью команды sudo, так что у вас есть еще одна возможность убедиться в правильности выбора устройства.
+To proceed with writing, select the desired option, enter the corresponding number, and press Enter. The writing process is executed with the `sudo` command, giving you an additional opportunity to double-check the correct device selection.
 
-Если файл образа содержится в архиве bz2, то перед записью образ будет распакован.
+If the image file is contained in a bz2 archive, it will be extracted before writing.
 
 ```bash
 select_dd_info() {
@@ -175,7 +183,7 @@ select_dd_info() {
 }
 ```
 
-Если на выбранном диске уже есть подмонтированные разделы, то перед записью они должны быть размонтированы. Для записи дистрибутива на карту памяти используется функция `sdcard_deploy`:
+If the selected disk has mounted partitions, they must be unmounted before writing. The `sdcard_deploy` function is used to write the distribution to the memory card.
 
 ```bash
 sdcard_deploy() {
@@ -186,9 +194,9 @@ sdcard_deploy() {
 }
 ```
 
-Функциональность из скрипта .vscode/yo/func.sh лучше разделять, так как функций можно наколотить множество и со временем, они перемешиваются:
+Functionality from the `.vscode/yo/func.sh` script should be split up, as you can pile up numerous functions over time that become tangled:
 
-то работающие, то устаревшие, то еще какие нибудь и то что проверено можно выносить в отдельный скрипт, покажу на примере `.vscode/yo/sdcard_deploy.sh`:
+some working, some outdated, some unreliable. Verified functions should be migrated to separate scripts - I'll demonstrate using `.vscode/yo/sdcard_deploy.sh` as an example:
 
 ```bash
 #!/bin/bash
@@ -198,11 +206,11 @@ source $this_d/func.sh
 sdcard_deploy
 ```
 
-Особенно это хорошо подходит для разделения функциональности, один работающий скрипт, который выполняет по возможности одну и только одну функцию верхнего уровня.
+This is especially useful for modularizing functionality, where a single working script performs, ideally, one and only one top-level function.
 
-Команды readlink и dirname используются для формирования абсолютных путей до запускаемого файла и каталога, а то с путями всегда возникает путаница, а так путь абсолютный и проблем меньше.
+The readlink and dirname commands are used to construct absolute paths to the executable file and directory. This avoids confusion with relative paths, which often lead to errors—absolute paths minimize such issues.
 
-Итак нажал кнопку в строке состояния VSCode, выбрал образ и диск для записи, и дистрибутив записался `.vscode/settings.json`:
+Finally, after clicking the button in the VSCode status bar, select the image and disk for writing, and the distribution will be recorded (see `.vscode/settings.json`):
 
 ```json
 {
@@ -213,11 +221,11 @@ sdcard_deploy
 }
 ```
 
-Для плагина "seunlanlege.action-buttons" текущим является каталог, в котором находиться конфигурация .vscode, поэтому перед вызовом функции записи меняю текущий каталог, это скорее соглашение вызова, чтобы команды для кнопок добавлять похожим образом, для переменной "YO_R"
-у меня есть дополнительная проверка, которая срабатывает если изначальный относительный путь для этой переменной указан неправильно:
+For the «seunlanlege.action-buttons» plugin, the current directory is where the ".vscode" configuration resides. Therefore, before calling the write function, I change the current directory—this is essentially a calling convention to standardize button command additions. For the "YO_R" variable,
+I've implemented an additional check that triggers if its initial relative path is specified incorrectly:
 
 ```bash
-# корневой каталог yocto, где будет располагаться каталог build, относительно текущего каталога
+# root yocto directory (where the build directory will be located), relative to the current directory
 YO_R="../.."
 find_setup_env() {
     if [ -f "${YO_R}/setup-environment" ]; then return 0; fi
@@ -234,11 +242,10 @@ find_setup_env() {
 find_setup_env
 ```
 
-
-Этот код находиться в самом начале скрипта `func.sh`, здесь корневой каталог определяется по наличию файла `setup-environment`, который отвечает за формирование первоначальной структуры дерева каталогов сборки, такого как:
+This code resides at the very beginning of the `func.sh` script. Here, the root directory is identified by the presence of the `setup-environment` file, which handles the creation of the initial build directory tree structure, such as:
 
 ```dart
- корневой каталог Yocto
+ root Yocto directory
     ├── build
     ├── downloads
     ├── setup-environment
@@ -247,15 +254,15 @@ find_setup_env
 ```
 
 
-## Сборка Yocto образа в Docker
+## Building Yocto Images in Docker
 
-Следующая функция для VSCode, которая мне нужна, это функция позволяющая собирать дистрибутив Yocto разными тулчейнами. Для старых Yocto веток, на новых хост системах, например в Ubuntu 24.04 все ну постоянно отваливается, то gcc не той версии, то линковщик, а то и вообще cmake ну совсем старый нужен.
+The next VSCode function I need is one that allows building Yocto distributions with different toolchains. For older Yocto branches on modern host systems like Ubuntu 24.04, everything constantly breaks—wrong GCC versions, linker issues, or needing ancient CMake versions. 
 
-Как то всегда возникает полная несовместимость инструментов сборки и того, что я хочу собрать, сейчас без Docker(а) в старые сборки лучше и не соваться, прямо беда, беда. 
+There's always complete incompatibility between the build tools and what I'm trying to compile. Honestly, without Docker, it's better not to even touch legacy builds—it's a complete nightmare. 
 
-Да и в новые тоже, рекомендую сборку осуществлять всегда только в докере.
+Frankly, I recommend always building in Docker, even for newer projects.
 
-Конфигурацию докера(ов) располагается в каталоге `.vscode/yo/docker`, например => `ubuntu_22_04`
+Docker configurations reside in the `.vscode/yo/docker` directory—for example => `ubuntu_22_04`:
 
 ```dart
     yo
@@ -268,18 +275,18 @@ find_setup_env
     └── sdcard_deploy.sh
 ```
 
-Содержание Dockerfile следующее:
+The Dockerfile contents are as follows:
 
 ```dart
 FROM ubuntu:22.04
-# Переключаю Ubuntu в неинтерактивный режим — чтобы избежать лишних запросов
+# Switch Ubuntu to non-interactive mode to avoid unnecessary prompts
 ENV DEBIAN_FRONTEND noninteractive
 
 # WARNING PUB = "/mnt/data"
 #
 RUN mkdir -p "/mnt/data"
 
-# Устанавливаю mc и перенастраиваю locales
+# Install Midnight Commander and reconfigure locales
 RUN apt update && \
     apt -y install \
     mc language-pack-ru \
@@ -292,72 +299,72 @@ RUN echo "LANG=ru_RU.UTF-8" >> /etc/default/locale \
 ENV LANG ru_RU.UTF-8
 ENV LANGUAGE ru_RU.UTF-8
 
-# Устанавливаю зависимости Yocto Project
+# Install Yocto Project dependencies
 RUN	apt -y install \
     gawk wget git-core diffstat unzip texinfo gcc-multilib \
     build-essential chrpath socat libsdl1.2-dev xterm cpio lz4 zstd
 
-RUN echo 'root:docker' | chpasswd
+### RUN echo 'root:docker' | chpasswd
 
-# Создание пользователя докера
+# Create Docker user
 RUN groupadd -f --gid 1000 user \
     && useradd --uid 1000 --gid user --shell /bin/bash --create-home user
 
-# Примечание: для подключения к работающему контейнеру под root (hash см. docker ps)
+# Note: To connect to a running container as root (check container hash with docker ps)
 # docker exec -u 0 -it hash_container bash
 USER user
 WORKDIR /mnt/data
 ENTRYPOINT ["./shell.sh"]
 ```
 
-Контейнер запускается под пользователем user, но в случае каких либо непредвиденных проблем, добавляется пароль "docker" для пользователя root и вы можете подключиться работающему к контейнеру под root(ом), и например установить какой нибудь пакет, с использованием команды apt.
+The container runs under the user account, but to handle unexpected issues, the password "docker" is added for the root user (commented in code). You can connect to the running container as root to install packages using apt.
 
-После устранения проблемы зависимостей, можно название этих недостающих пакетов добавить в Dockerfile напрямую, а как отладили образ для контейнера, строку можно закомментировать.
+After resolving dependency problems, add the names of these missing packages directly to the Dockerfile. Once the container image is debugged, comment out this line.
 
-Для работы с докером служит Makefile:
+A Makefile is used for Docker operations:
 
 ```dart
 IMAGE = ubuntu_22_04
-# каталог для сборки образа внутри контейнера, такой же путь надо указать в файле Dockerfile см. метку WARNING
+# Build directory inside the container - must match the path in Dockerfile (see WARNING label)
 PUB   = "/mnt/data"
-# путь до корневого каталога сборки, в котором находится файл setup-environment (если не задан, то ../docker)
+# Path to root build directory containing setup-environment file (default: ../docker if not set)
 YO_R ?= $(shell dirname $(shell pwd))
 
 run:
-    docker run --rm \
-    --network=host \
-    -v ${HOME}/.ssh:/home/user/.ssh:z \
-    -v $(shell readlink -f ${SSH_AUTH_SOCK}):/ssh-agent -e SSH_AUTH_SOCK=/ssh-agent \
-    --cap-add=cap_sys_admin --cap-add=cap_net_admin --cap-add=cap_net_raw \
-    --mount type=bind,source=${YO_R},target=${PUB} -ti ${IMAGE}
+	docker run --rm \
+	--network=host \
+	-v ${HOME}/.ssh:/home/user/.ssh:z \
+	-v $(shell readlink -f ${SSH_AUTH_SOCK}):/ssh-agent -e SSH_AUTH_SOCK=/ssh-agent \
+	--cap-add=cap_sys_admin --cap-add=cap_net_admin --cap-add=cap_net_raw \
+	--mount type=bind,source=${YO_R},target=${PUB} -ti ${IMAGE}
 
 run_detach:
-    docker run --rm \
-    --network=host \
-    -v ${HOME}/.ssh:/home/user/.ssh:z \
-    -v $(shell readlink -f ${SSH_AUTH_SOCK}):/ssh-agent -e SSH_AUTH_SOCK=/ssh-agent \
-    --cap-add=cap_sys_admin --cap-add=cap_net_admin --cap-add=cap_net_raw \
-    --mount type=bind,source=${YO_R},target=${PUB} -d -t ${IMAGE}
+	docker run --rm \
+	--network=host \
+	-v ${HOME}/.ssh:/home/user/.ssh:z \
+	-v $(shell readlink -f ${SSH_AUTH_SOCK}):/ssh-agent -e SSH_AUTH_SOCK=/ssh-agent \
+	--cap-add=cap_sys_admin --cap-add=cap_net_admin --cap-add=cap_net_raw \
+	--mount type=bind,source=${YO_R},target=${PUB} -d -t ${IMAGE}
 
 build:
-    docker build -f Dockerfile --tag ${IMAGE} .
+	docker build -f Dockerfile --tag ${IMAGE} .
 
 rebuild:
-    docker build -f Dockerfile --no-cache --tag ${IMAGE} .
-
+	docker build -f Dockerfile --no-cache --tag ${IMAGE} .
+	
 install:
-    sudo apt-get update
-    sudo apt-get install -y docker.io
-
-# удаление всех остановленных контейнеров,
+	sudo apt-get update
+	sudo apt-get install -y docker.io
+	
+# Remove all stopped containers
 clean-all-container:
-    sudo docker rm $(docker ps -qa)
-
+	sudo docker rm $(docker ps -qa)
+	
+	
 .PHONY: run build clean-all-container
 ```
 
-
-Здесь докер запускается следующим образом:
+Here, Docker is launched as follows:
 
 ```cmake
 docker run --rm \
@@ -372,42 +379,31 @@ docker run --rm \
   -d -t ${IMAGE}
 ```
 
-где
+Where:
 
-* rm — автоматическое удаление контейнера после завершения его работы;
-* network=host — c этим параметром устраняется сетевая изолированность;
-  между контейнером и хостом Docker и напрямую используются сетевые ресурсы хоста, это небезопасно для хоста,
-  и может применяться только в том случае, если вы знаете, что данный контейнер предназначен для внутренней закрытой извне сети;
-* v (или --volume) используется docker(ом) для создания пространства хранения внутри контейнера,
-  которое отделено от остальной части файловой системы контейнера, том не увеличивает размер контейнера,
-  в данном случае пробрасывается сокет c ssh-agent(ом) запущенном на хосте для работы ssh авторизации внутри контейнера;
-* cap-add=cap_net_admin привилегия, которая позволяет монтировать и размонтировать файловые системы;
-* cap-add=cap_sys_admin предоставляет контейнеру набор системных привилегий, но не делает его полностью привилегированным;
-* cap-add=cap_net_raw привилегия дающая право на создание RAW и PACKET сокетов в контейнере,
-  в частности эта привилегия необходима для получения и отправки ICMP пакетов в контейнере;
-* mount опция монтирования, которая пробрасывает корневой yocto каталог, в котором также располагается каталог build,
-  он содержит все артефакты сборки, таким образом весь результат работы контейнера сохраняется в хост системе,
-  этим я обеспечиваю то, что можно беспрепятственно останавливать и удалять контейнер, а в новом запуске
-  можно продолжить работу на тех же артефактах. После первого запуска переменных среды yocto (setup-environment),
-  сборочный путь жестко прописывается в конфигурационных скриптах и при изменении точки монтирования PUB
-  /mnt/data на другую сборка внутри контейнера не будет работать,
-  при проверке путей сборки в bitbake вы получите сообщение об ошибке (но это особенность системы сборки yocto);
-* d запуск контейнера в фоне;
-* t обеспечение контейнеру запуск псевдотерминала tty, контейнер не завершит свою работу, пока сеанс терминала не закончиться.
-
-Переменная `IMAGE` указывает основное имя с которым контейнер будет запущен.
-
-Так же если вы хотите запустить докер не в фоне, а на переднем плане, нужно убрать опцию "-d" и добавить опцию "-i", чтобы контейнер запускался в интерактивном режиме, когда можно напрямую вводить команды в работающей оболочке контейнера, в Makefile я разделяю эти режимы:
-
-- make run - интерактивный режим с инициализацией yocto (выполнение setup-environment);
-- make run_detatch - фоновый запуск контейнера, для того, чтобы подключиться к уже запущенному контейнеру,
-  для выполнения одной команды bitbake,
-  при каждом запуске создается shell сеанс с инициализацией setup-environment
-  и последующим выполнением в нем пользовательской команды.
+* `--rm` - Automatically removes the container after it exits;
+* `--network=host` - Eliminates network isolation between container and host. Directly uses host's network resources.   
+  **Security warning:** Only use when the container is intended for internal, externally-closed networks;
+* `-v` (or `--volume`) - Creates storage space within the container separate from its filesystem. Volumes don't increase 
+  container size. Here: forwards host's SSH agent socket for SSH authorization inside the container;
+* `--cap-add=cap_net_admin` - Privilege allowing mounting/unmounting filesystems;
+* `--cap-add=cap_sys_admin` - Grants system administration capabilities without making the container fully privileged;
+* `--cap-add=cap_net_raw` - Privilege enabling RAW/PACKET socket creation. Required for sending/receiving ICMP packets within the container;
+* `--mount` - Mounts the root Yocto directory (containing `build/` with all build artifacts) into container. **Critical  benefit:** Preserves build outputs on host, allowing container termination/deletion without data loss. **Yocto limitation:** Build path hardcoded after first `setup-environment` run. Changing `PUB` mount point (/mnt/data) breaks builds - Bitbake will throw path errors;
+* `-d` - Runs container in background (detached mode);
+* `-t` - Allocates pseudo-TTY terminal. Container persists until terminal session ends.
 
 
-Далее для работы с этим Makefile(лом) мне нужно в `.vscode/yo/func.sh` добавить функцию поиска идентификатора запущенного Docker контейнера:
+The `IMAGE` variable specifies the primary name for launching the container.
 
+Additionally, to run Docker in the foreground (instead of background), remove the "-d" option and add "-i". This starts the container in interactive mode, allowing direct command input in its running shell. The Makefile separates these modes:
+
+- make run: Interactive mode with Yocto initialization (executes setup-environment);
+- make run_detach: Background container launch. To connect to an already running container for executing a single   
+  bitbake command, each start creates a shell session initialized with setup-environment, 
+  followed by execution of the user command.
+
+Next, to work with this Makefile, I need to add a function to `.vscode/yo/func.sh` that finds the ID of the running Docker container:
 
 ```bash
 CONTAINER_ID=""
@@ -420,8 +416,8 @@ find_docker_id() {
 }
 ```
 
-результат поиска сохраняется в переменой `CONTAINER_ID`
-и используется в функции запуска команд внутри контейнера start_cmd_docker():
+The search result is stored in the variable `CONTAINER_ID`
+and used in the `start_cmd_docker()` function to execute commands inside the container:
 
 ```bash
 start_cmd_docker() {
@@ -450,14 +446,14 @@ start_cmd_docker() {
 }
 ```
 
-где первым аргументом можно передать команду или список команд, которые разделяются символом ";"
-Здесь главное, чтобы переменная `DOCKER_DIR` содержала правильный путь до каталога с Makefile для Docker(a).
+Where the first argument can be a command or list of commands separated by ";". 
+The key requirement is that the `DOCKER_DIR` variable contains the correct path to the Docker Makefile directory.
 
-Функция `start_cmd_docker` вначале ищет hash идентификатор контейнера по имени, которое можно посмотреть в Makefile, см. IMAGE=ubuntu_22_04, и если контейнер не запущен, то он запускается в фоновом режиме (make run_detach) и далее через команду docker exec идет подключение и запуск нового bash процесса, в котором и происходит выполнение переданных первым аргументом команд см. `$cmd_args`
+The `start_cmd_docker` function first searches for the container hash ID by name (visible in the Makefile, see IMAGE=ubuntu_22_04). If the container isn't running, it starts in background mode (make run_detach), then connects via docker exec to launch a new bash process. Within this process, the commands passed as the first argument `$cmd_args` are executed.
 
-Есть еще дополнительная проверка, на наличие каталога сборки build, и если его нет, то команды в контейнере запущены не будут.
+An additional check verifies the existence of the build directory - if missing, container commands won't execute.
 
-Работа с этой функцией описана в shell скрипте `.vscode/yo/build_image.sh`
+Usage of this function is documented in the shell script `.vscode/yo/build_image.sh`:
 
 ```bash
   #!/bin/bash
@@ -472,21 +468,20 @@ start_cmd_docker() {
   start_cmd_docker "${cmd_init}; ${cmd_runs}"
 ```
 
+The launch process is split into two parts:
+static: `cmd_init` and dynamic `cmd_run` (containing commands to execute within the Yocto environment), for example:
 
-Процесс запуска разделяется на две части:
-статическую: cmd_init и динамическую cmd_run, со списком команд, которые вы хотите запустить внутри Yocto среды, например:
+- bitbake image_name_to_build;
+- bitbake specific_recipe_to_build;
+- etc.
 
-- bitbake имя_образа_для_сборки;
-- bibbake имя_отдельного_рецепта_для_сборки;
-- и т.д.
+cmd_init initializes the Yocto build environment for the specified target platform. The `setup-environment` script receives the platform name (sourced from `build/conf/local.conf`).
 
-cmd_init осуществляет  запуск Yocto среды сборки под указанную целевую платформу, скрипту setup-environment
-передается название платформы (берется из build/conf/local.conf).
-
-Запуск скрипта build_image.sh, по нажатию кнопки в status bar прописывается в `.vscode/settings.json` так:
+The `build_image.sh` script launch - triggered by a status bar button - is configured in `.vscode/settings.json` as follows:
 
 ```json
-...
+
+   ...
 "actionButtons": {
   "reloadButton": null,
   "loadNpmCommands": false,
@@ -507,7 +502,7 @@ cmd_init осуществляет  запуск Yocto среды сборки п
 }
 ```
 
-также по нажатию кнопки Build можно запустить интерактивный сеанс работы с bitbake, за это отвечает функция `start_session_docker`, описанная в .vscode/yo/func.sh:
+Additionally, pressing the Build button launches an interactive bitbake session, handled by the `start_session_docker()` function defined in `.vscode/yo/func.sh`:
 
 ```bash
   start_session_docker() {
@@ -517,16 +512,15 @@ cmd_init осуществляет  запуск Yocto среды сборки п
   }
 ```
 
-Здесь сам запуск shell процесса описан в последней строке:
+Here, the actual launch of the shell process is described in the final line:
+
 Dockerfile: ENTRYPOINT ["./shell.sh"]
 
-В этом случае остается запущенным терминал в VSCode, к которому вы всегда сможете обращаться для работы с вашей Yocto сборкой.
+In this scenario, a terminal remains running in VSCode that you can always access to work with your Yocto build.
 
+## Running Yocto Builds for Raspberry Pi on QEMU Virtual Machine
 
-## Запуск Yocto сборки для Raspberry Pi под виртуальной машиной Qemu
-
-Следующей функцией которую я захотел добавить для VSCode является функция запуска и отладки Yocto дистрибутива без наличия платы Raspberry Pi, иногда когда платы нет под рукой не получается посмотреть вновь собранный Yocto образ, пример покажу для платы Raspberry Pi 3, так можно запустить только 64 битный образ.
-
+The next function I wanted to add to VSCode enables running and debugging Yocto distributions without a physical Raspberry Pi board. When the board is unavailable, this allows testing newly built Yocto images. I'll demonstrate using Raspberry Pi 3 as an example—note only 64-bit images can be launched this way.
 
 ```bash
 start_qemu_rpi3_64() {
@@ -560,98 +554,86 @@ start_qemu_rpi3_64() {
 }
 ```
 
-где:
+Where:
 
-`qemu-system-aarch64` - запуск Qemu для 64 битных сборок, если вдруг вы захотите запустить дистрибутив собранный под 32 битную разрядность, то вас может ждать пустой терминал, совсем пустой, ядро даже не пикнет, и в этом случае сильно помогает опция:
+`qemu-system-aarch64` - launches QEMU for 64-bit builds. If you attempt to run a distribution built for 32-bit architecture, you may encounter a completely blank terminal—no kernel output whatsoever. In such cases, the following option proves invaluable:
 
-`-d in_asm -D QEMU_log.txt` для записи всех ассемблерных инструкций в отдельный файл, это медленно, но если вы перепутали процессорные инструкции, то вы должны об этом узнать.
+`-d in_asm -D QEMU_log.txt` - logs all assembly instructions to a separate file. This slows execution significantly, but if you've mixed up processor architectures, you absolutely need this diagnostic output.
 
-Параметры:
+**Parameters:**  
 
-* `m 1G` - количество оперативной памяти;
-* `M raspi3b` - тип запускаемой машины Raspberry Pi 3;
-* `dtb bcm2837-rpi-3-b.dtb` - указание правильного дерева устройств для нашей платы, без него
-  ядро не сможет запуститься и инициализировать устройства RPI3, DTB (Device Tree Blob) описывает все компоненты платы:
-  CPU, периферия, адреса памяти и прерывания для устройств;
-* `kernel Image` - название файла с ядром, которое запускается;
-* `serial mon:stdio` в qemu позволяет вам перенаправить выходные данные последовательного порта
-  на стандартный ввод-вывод (stdout) вашей терминальной сессии, таким образом всё, что отправляется
-  на последовательный порт виртуальной машины, будет выводиться в терминал, из которого вы запустили Qemu,
-  и вы сможете вводить данные в виртуальную машину через тот же терминал;
-* drive file=${image},format=raw,if=sd,readonly=off - подключает виртуальный диск как SD карту
-  в raw (сыром) формате, при этом в самом файле содержится таблица разделов и два логических диска
-  (см. `fdisk -l $image`), на втором диске находится
-  корневая файловая система rootfs, диск будет доступен для записи;
-* append "console=ttyAMA0,115200 root=/dev/mmcblk0p2 rw earlycon=pl011,0x3f201000"
-  здесь настраивается системная консоль:
-  - `console=ttyAMA0,115200` это основной канал связи между ядром Linux и пользователем;
-  - `root=/dev/mmcblk0p2 rw` подключает второй логический раздел блочного устройства
-    как корневую файловую систему в режиме чтение/запись;
-  - `earlycon=<драйвер>,<опции>,<адрес>` выводить сообщения на этапе загрузки
-    до инициализации основных драйверов, формат ввода:
-    - `pl011` — это тип UART-контроллера, используемого в Raspberry Pi;
-    - `адрес 0x3f201000` указывает на регистры этого контроллера в памяти,
-      хочу отметить, что этот адрес специфичен для реального железа Raspberry Pi,
-      в плате Raspberry Pi ttyAMA0 всегда связан с контроллером UART pl011;
-* `nographic` - отключение графического вывода, при этом виртуальная машина будет работать в текстовом режиме,
-  без использования стандартного графического интерфейса Qemu,
-  все выводимые сообщения (включая вывод из гостевой ОС)
-  отображаются в терминале, из которого была запущена виртуальная машина,
-  это позволяет вести мониторинг работы системы и взаимодействовать
-  с ней только через текстовые команды.
+* `-m 1G`: RAM allocation (1 gigabyte)
+* `-M raspi3b`: Machine type (Raspberry Pi 3 Model B)
+* `-dtb bcm2837-rpi-3-b.dtb`: Device Tree Blob for target board. Essential for boot - without it, the kernel cannot 
+  initialize RPi3 hardware. Describes all board components: 
+  CPU, peripherals, memory addresses, and device interrupts.  
+* `-kernel Image`: Kernel filename to execute
+* `-serial mon:stdio`: Redirects serial port output to your terminal's stdout. 
+  All VM serial output appears in the 
+  QEMU launch terminal, enabling bidirectional terminal communication.  
+* `-drive file=${image},format=raw,if=sd,readonly=off`: Attaches virtual disk as writable SD card in raw format.
+  Contains partition table with two logical drives 
+  (see `fdisk -l $image`). The second drive hosts the rootfs.  
+* - append "console=ttyAMA0,115200 root=/dev/mmcblk0p2 rw earlycon=pl011,0x3f201000": Console configuration:  
+  - `console=ttyAMA0,115200`: Primary Linux kernel-user communication channel  
+  - `root=/dev/mmcblk0p2 rw`: Mounts second partition as read-write root filesystem  
+  - `earlycon=pl011,0x3f201000`: Early boot output (pre-driver initialization):  
+    - `pl011`: UART controller type in Raspberry Pi  
+    - `0x3f201000`: Controller's memory-mapped registers (hardware-specific to RPi)  
+      Note: ttyAMA0 always maps to pl011 UART in Raspberry Pi  
+* `-nographic`: Disables graphical output. VM runs in text mode with all guest OS output displayed in the launch   
+  terminal. Enables monitoring/interaction via text commands only.  
 
 
-Для Qemu raspi3b используется DTB, более совместимый с эмуляцией: dtb="bcm2837-rpi-3-b.dtb".
+For QEMU raspi3b, use a DTB with better emulation compatibility: dtb="bcm2837-rpi-3-b.dtb".
 
-Еще можно использовать дополнительные опции для отладки:
-"-d guest_errors,unimp,cpu_reset -D QEMU.log":
+Additional debugging options are available:
+"-d guest_errors,unimp,cpu_reset -D QEMU.log"
 
-Опции включают разные категории отладочной информации, информация сохраняется в отдельном файле:
+These enable various debug information categories, logged to a separate file:
 
-* `guest_errors`: фиксирует ошибки, возникающие у гостевой операционной системы;
-* `unimp`: записывает попытки использования недоступных инструкций
-  или функциональности в эмулируемом устройстве;
-* `cpu_reset`: фиксирует информацию, связанную с сбросом процессора.
+* `guest_errors`: Captures errors occurring within the guest OS;
+* `unimp`: Logs attempts to use unimplemented instructions or features in emulated hardware;
+* `cpu_reset`: Records CPU reset-related events.
 
+On actual Raspberry Pi 3 hardware, the GPU serves as the primary controller - it's the master component, with the CPU operating in full dependency. The proprietary bootloader bootcode.bin typically resides on the SD card's first boot partition. Its primary function is loading GPU firmware => start.elf and fixup.dat (or start4.elf depending on board version), then transferring execution control. The GPU firmware subsequently parses the configuration file [config.txt](https://www.raspberrypi.com/documentation/computers/config_txt.html)
 
-На реальной плате Raspberry Pi 3 управляющим является GPU, он там вообще главный, а CPU полностью находится в этой зависимости. Проприетарный загрузчик bootcode.bin обычно находится на первом загрузочном разделе SD карты, и первым делом он грузит прошивку для GPU => start.elf и fixup.dat (или в зависимости от версии платы start4.elf), и передает ей управление, прошивка для GPU разбирает файл конфигурации [config.txt](https://www.raspberrypi.com/documentation/computers/config_txt.html)
+It forms kernel boot parameters and transfers control to the CPU to launch the kernel.
 
-формируя загрузочные параметры ядра и передает управление CPU для запуска ядра.
+The qemu-system-aarch64 ... command presented earlier operates slightly differently:
 
-Представленная выше команда "qemu-system-aarch64 ..." работает немного иначе:
+First, we completely remove the GPU from this chain - we bypass it by directly loading the kernel via the -kernel parameter. This approach is faster and less error-prone. While we retain all boot files (bootcode.bin, start.elf, etc.) on the SD card's first boot partition for compatibility, QEMU ignores them during this direct boot process:
 
-Во первых мы с вами убираем GPU из этой цепочки, мы его игнорируем, осуществляя прямую загрузку ядра через параметр -kernel, так быстрее и меньше ошибок, у нас конечно есть все загрузочные файлы на первом загрузочном разделе SD карты:
+see `-drive file=${image}` (mapped to /dev/mmcblk0p1 in-system), but I prefer not to validate secondary/tertiary bootloader mechanisms. 
 
-см `-drive file=${image}` (в системе это /dev/mmcblk0p1), но именно проверять сам механизм вторичных и третичных загрузчиков как то не хочется. 
+Frankly, GPU emulation level for `-M raspi3b` in QEMU remains unclear. The critical requirement is passing an accurate dtb="bcm2837-rpi-3-b.dtb" to the kernel - without it, nothing functions.
 
-Да и не понятно, на каком уровне работает эмуляция GPU в QEmu для `-M raspi3b`, здесь главное передать ядру актуальный dtb="bcm2837-rpi-3-b.dtb", без него то же ничего работать не будет.
+Boot sequence: The kernel launches → initializes hardware → mounts root filesystem → OS transitions to target runlevel → spawns virtual terminals via getty processes. These create user I/O sessions. If we've correctly associated getty with our emulated `pl011 UART controller => /dev/ttyAMA0`, we'll see the login: prompt, enabling password entry and system access.
 
-Ядро запускается, инициализирует оборудование, подключает корневую файловую систему, ОС переходит на нужный уровень исполнения, запускает виртуальные терминалы `tty` через getty процессы, которые создают сессии для ввода/вывода пользователя и если мы правильно ассоциировали `getty` c нашим эмулируемым контроллером `UART pl011 => /dev/ttyAMA0` то мы увидим пользовательское приглашение login: и далее можно вводить пароль и работать.
+There's another nuance here:
 
-Здесь есть еще один нюанс:
-
-Если ничего не менять в образе, то `getty` не будет ассоциировать с `/dev/ttyAMA0` и для того, чтобы это произошло нужно еще дополнительно собрать образ с использованием:
+If you make no changes to the image, getty won't associate with /dev/ttyAMA0. To enable this association, you must build the image with additional configuration:
 
 ```dart
-  # это с учетом того, что система запускается через SysVinit,
-  # под Systemd это не проверялось (там по другому)
+  # Assumes system boots via SysVinit
+  # Not tested with Systemd (different implementation there)
   SERIAL_CONSOLES = "115200;ttyAMA0"
   SERIAL_CONSOLES_CHECK = "ttyAMA0:ttyS0"
 
-  # эти параметры повлияют на изменения
-  # системного файла /etc/inittab в образе
-  # и ассоциируют getty с последовательным портом
+  # These parameters will modify
+  # the system file /etc/inittab in the image
+  # and associate getty with the serial port
 
-  # Параметры добавляются в
-  # конфигурационный файл слоя в `local.conf`
+  # Parameters are added to
+  # the layer configuration file in local.conf
 ```
 
-Вообщем то, получается как то совсем не удобно, специально пересобирать тот же core-image-minimal для запуска под виртуальную машину Qemu, но можно `/etc/inittab` менять на лету в `core-image-minimal.wic`, вначале смонтировать его c помощью `mount_raw_image` (см. ниже), скорректировать, сохранить изменения и вызвать `umount_raw_image` (будет время я это проверю).
+Note: overall, this approach proves quite inconvenient - specifically rebuilding core-image-minimal just for QEMU VM execution. However, you can dynamically modify /etc/inittab within `core-image-minimal.wic`: First mount it using `mount_raw_image` (see below), adjust the configuration, save changes, then call `umount_raw_image`
 
 
-## Использование приема Барона Мюнхгаузена для документирования bash
+## Using the Baron Munchausen Method for Bash Self-Documentation
 
-Здесь я хотел бы привести следующий пример, простого само документирования bash кода:
+Here I'd like to present a simple example of self-documenting bash code:
 
 ```bash
 #!/bin/bash
@@ -661,17 +643,17 @@ help() {
     grep -A 1 "^# " "${script_path}" | sed 's/--//g'
 }
 
-# Пример bash функции 1 (входит в описание интерфейсов)
+# Example bash function 1 (included in interface description)
 example_bash_function1() {
     echo "example_bash_function1"
 }
 
-# Пример bash функции 2 (входит в описание интерфейсов)
+# Example bash function 2 (included in interface description)
 example_bash_function2() {
     echo "example_bash_function2"
 }
 
-#Пример bash функции 3, которая исключается из описания интерфейсов
+# Example bash function 3, excluded from interface description
 example_bash_function3() {
     echo "example_bash_function3"
 }
@@ -679,29 +661,34 @@ example_bash_function3() {
 help
 ```
 
-Это удобно тем, что если работать со скриптом через:
+This approach is convenient because when working with the script via:
 `source name_script.sh`
-то можно сразу увидеть названия всех используемых интерфейсов скрипта.
+you immediately see all available script interfaces.
 
-Для того чтобы функция попала в это описание, достаточно, добавить комментарий перед названием функции, комментарий должен быть в начале строки и за ним должен следовать пробел, а если вы хотите убрать функцию из описания, то достаточно убрать этот пробел.
+To include a function in this documentation, simply add a comment line immediately before the function declaration. The comment must: 
 
-Комментарии внутри bash функций уже в help не попадут по определению, так как они идут не вначале строки, а сдвинуты хотя бы на 4 пробела, так как форматирование в скриптах я надеюсь еще никто не отменял.
+- begin at the start of the line
+- contain a space after the # symbol
 
-Как это работает:
+To exclude a function from documentation, omit the space after # in its preceding comment. Comments inside bash functions won't appear in the help output because they:
 
-* realpath — преобразует относительный путь в абсолютный;
-* grep -A 1 "^# " — ищет строки, начинающиеся с "# " и захватывает следующую строку;
-* sed 's/--//g' — удаляет символы --, которые добавляются grep.
+- don't start at the beginning of the line
+- are indented by at least 4 spaces (assuming proper script formatting)
 
-Есть конечно и недостатки: для больших скриптов, это может выглядеть громоздко и если функций много, то это не всегда оправдано.
+How it works:
 
-Из достоинств: названия функций будут всегда актуальными и нужно еще постараться придумать емкое описание функции в одну строку, а если не получается сформулировать в одну, то может быть задуматься, а нужна ли она вообще такая функция?
+* realpath: Converts relative paths to absolute paths;
+* grep -A 1 "^# ": Finds lines starting with "# " and captures the next line;
+* sed 's/--//g': Removes the -- characters added by grep.
+
+Of course, there are drawbacks: For large scripts, this approach can appear cumbersome. When dealing with numerous functions, it's not always justified.
+
+Advantages include: Function names remain consistently up-to-date forces concise single-line descriptions - if you can't explain a function in one line, reconsider its necessity.
 
 
-## Развертывание YoctoDemoMinimal образа из Yocto коробки
+## Deploying the YoctoDemoMinimal Image from the Yocto Box
 
-Для работы с Yocto я подготовил хороший пример - конфигурацию, для сборки минимального Yocto образа
-для платы Raspberry Pi 4, по нажатию этой кнопки выполняется следующий код:
+For working with Yocto Project, I’ve prepared a practical example — a configuration for building a minimal Yocto image for the Raspberry Pi 4 board. Pressing this button executes the following code:
 
 ```bash
 example_yocto_demo_minimal_rpi4() {
@@ -710,17 +697,14 @@ example_yocto_demo_minimal_rpi4() {
   cd ${proj_demo}
   repo init -u https://github.com/berserktv/bs-manifest -m raspberry/scarthgap/yocto-demo-minimal.xml
   repo sync
-
-  # первый запуск конфигурации, создание каталога build
+  # first start (create build)
   echo "exit" | ./shell.sh
-
-  # скрипт для запуска VSCode
+  # script for start VSCode
   echo "#!/bin/bash" > start-vscode.sh
   echo "cd sources/meta-raspberrypi" >> start-vscode.sh
   echo "code ." >> start-vscode.sh
   chmod u+x start-vscode.sh
-
-  # запуск нового экземпляра VSCode
+  # start new VSCode instance
   cd sources/meta-raspberrypi
   git clone https://github.com/berserktv/vscode-yocto-helper.git .vscode
   # rm -fr .vscode/.git
@@ -728,50 +712,50 @@ example_yocto_demo_minimal_rpi4() {
 }
 ```
 
-Таким образом настройка плагина с кнопками копируется в тот каталог с исходным кодом одного из слоев Yocto Project, который я хотел бы выбрать в качестве основного каталога разработки, в примере у меня это BSP слой для поддержки платы Raspberry Pi 4 => "meta-raspberrypi".
+Thus, the plugin button configuration is copied to the source code directory of a selected Yocto Project layer - specifically, the layer I designate as the primary development directory. In my example, this is the BSP layer for Raspberry Pi 4 support: => "meta-raspberrypi".
 
-Затем запускается второй экземпляр VSCode c этой новой конфигурацией и там уже кнопки сборки окажутся в привычном для себя окружении, и можно собрать образ "core-image-minimal" из Yocto коробки.
+A second VSCode instance is then launched with this new configuration. Within this environment, the build buttons appear in their native habitat, allowing you to build the "core-image-minimal" Yocto image out-of-the-box.
 
+## Dishing Out Buster Slim for an Ultimate Docker Breakdown
 
-## Выписываем Buster Slim(а) для крутой разборке в Докере
+Next, I'll tackle booting the built core-image-minimal for Raspberry Pi 4. The next function I absolutely need is network booting for Raspberry Pi 4. This requires only an Ethernet cable - incredibly convenient. You can build a distribution version, load it over the network, test something, reload it, and repeat.
 
-Далее я буду разбираться с загрузкой собранного core-image-minimal для платы Raspberry Pi 4. Следующая функция которая мне ну просто необходима это загрузка Raspberry Pi 4 по сети. И для этого нужен только сетевой кабель, очень удобно. Собрали какую то версию дистрибутива, загрузили по сети, что то проверили, снова загрузили и т.д.
+The setup assumes one host interface (e.g., Wi-Fi) provides internet access, while the second network interface remains free. We'll directly connect this free interface via cable to the Raspberry Pi 4's network port.
 
-Предполагается, что по одному интерфейсу на хост компьютере, например Wifi подключен интернет, а второй сетевой интерфейс свободен, вот его мы и будем напрямую соединять кабелем с сетевым интерфейсом Raspberry Pi 4.
+Without modifying the Yocto configuration or meta-raspberrypi layer, the build produces an archived wic image: `bz2 => core-image-minimal-raspberrypi4-64.rootfs.wic.bz2`
 
-Если ничего не менять в Yocto конфигурации и слое meta-raspberrypi, то собирается архивный wic образ `bz2 =>  core-image-minimal-raspberrypi4-64.rootfs.wic.bz2`
-
-Если его распаковать, то можно посмотреть структуру командой:
+If you unpack it, you can examine its structure using the command:
 
 `fdisk -l core-image-minimal-raspberrypi4-64.rootfs.wic`
 
-Это стандартный RAW образ, который содержит в своем составе таблицу разделов состоящей из двух логических дисков:
+This is a standard RAW image containing a partition table with two logical partitions:
 
-- загрузочный раздел fat32;
-- корневой rootfs раздел в формате ext4.
+- A FAT32 boot partition;
+- An ext4-formatted rootfs partition.
 
-для того, чтобы образ подмонтировать, я написал следующий код:
+To mount this image, I've implemented the following code:
 
 ```bash
 mount_raw_image() {
   if [[ -z "${IMAGE_DIR}" || -z "${IMAGE_NAME}" || -z "${MOUNT_DIR}" ]]; then
-      echo "Ошибка: Установите переменные окружения IMAGE_DIR, IMAGE_NAME и MOUNT_DIR" >&2
+      echo "Error: Set environment variables IMAGE_DIR, IMAGE_NAME, and MOUNT_DIR" >&2
       return 1
   fi
 
   local image_file="${IMAGE_DIR}/${IMAGE_NAME}"
   if [ ! -f "${image_file}" ]; then
-      echo "Ошибка: Файл образа ${image_file} не найден" >&2
-      return 2
+    echo "Error: Image file ${image_file} not found" >&2
+    return 2
   fi
 
   local loop_dev=$(losetup -j "${image_file}" | awk -F: '{print $1}')
   if [ -z "${loop_dev}" ]; then
-      loop_dev=$(sudo losetup -f --show -P "${image_file}")
-      if [[ $? -ne 0 ]]; then echo "Ошибка: Не удалось создать loop-устройство" >&2; return 3; fi
-      echo "Создано новое loop-устройство: ${loop_dev}"
+    echo "sudo losetup -f --show -P ${image_file}"
+    loop_dev=$(sudo losetup -f --show -P "${image_file}")
+    if [[ $? -ne 0 ]]; then echo "Error: Failed to create loop device" >&2; return 3; fi
+    echo "Created new loop device: ${loop_dev}"
   else
-      echo "Используется существующее loop-устройство: ${loop_dev}"
+    echo "Using existing loop device: ${loop_dev}"
   fi
 
   local uid=$(id -u)
@@ -780,41 +764,42 @@ mount_raw_image() {
   mkdir -p ${MOUNT_BASE_DIR}
 
   for part_num in {1..4}; do
-      local partition="${loop_dev}p${part_num}"
-      if [[ -b "${partition}" ]]; then
-          local mount_point="${MOUNT_BASE_DIR}/part${part_num}"
-          if mountpoint -q "${mount_point}"; then
-              echo "Раздел ${part_num} уже смонтирован в ${mount_point}, пропускаем..."
-              continue
-          fi
-
-          mkdir -p "${mount_point}"
-          local fs_type=$(sudo blkid -o value -s TYPE "${partition}")
-          case "${fs_type}" in
-              vfat)
-                  sudo mount -o rw,uid=${uid},gid=${gid} "${partition}" "${mount_point}" ;;
-              *)
-                  sudo mount -o rw "${partition}" "${mount_point}" ;;
-          esac
-
-          if [[ $? -eq 0 ]]; then echo "Раздел ${part_num} смонтирован в ${mount_point}";
-          else echo "Ошибка при монтировании раздела ${part_num}" >&2; fi
+    local partition="${loop_dev}p${part_num}"
+    if [[ -b "${partition}" ]]; then
+      local mount_point="${MOUNT_BASE_DIR}/part${part_num}"
+      if mountpoint -q "${mount_point}"; then
+        echo "Partition ${part_num} is already mounted at ${mount_point}, skipping..."
+        continue
       fi
+
+      mkdir -p "${mount_point}"
+      echo "sudo blkid -o value -s TYPE ${partition}"
+      local fs_type=$(sudo blkid -o value -s TYPE "${partition}")
+      case "${fs_type}" in
+        vfat)
+            sudo mount -o rw,uid=${uid},gid=${gid} "${partition}" "${mount_point}" ;;
+        *)
+            sudo mount -o rw "${partition}" "${mount_point}" ;;
+      esac
+
+      if [[ $? -eq 0 ]]; then echo "Partition ${part_num} mounted at ${mount_point}";
+      else echo "Error mounting partition ${part_num}" >&2; fi
+    fi
   done
 }
 ```
 
-Здесь я использую механизм ядра, который позволяет обращаться к обычным файлам как к блочным устройствам, Loop устройства как бы "замыкают" файл в виртуальный диск и система работает с ним так же, как и с реальным устройством.
+Here, I leverage a kernel mechanism that enables treating regular files as block devices. Loop devices essentially "wrap" files into virtual disks, allowing the system to interact with them identically to physical hardware.
 
-И основная утилита в Linux для этого, это losetup. Для разных типов файловых систем могут использоваться немного разные параметры, например для fat32 не получиться редактировать файлы от имени обычного пользователя без uid/gid, а мне это нужно, очень нужно.
+The primary Linux utility for this is losetup. Different filesystem types may require slightly different parameters. For example, with FAT32, you can't edit files as a regular user without UID/GID mapping - and I absolutely need this capability.
 
-Для работы функции ей нужно задать три параметра, вернее три переменные окружения:
+The function requires three environment variables as parameters:
 
-`IMAGE_NAME` - название образа
-`IMAGE_DIR`  - каталог в котором находится файл образа
-`MOUNT_DIR`  - каталог в который файл образа будет примонтирован
+`IMAGE_NAME` - image filename
+`IMAGE_DIR`  - directory containing the image file
+`MOUNT_DIR`  - mount target directory
 
-здесь дополнительно используется функция `get_mount_base`:
+Note: This implementation additionally utilizes the `get_mount_base()` function:
 
 ```lua
 MOUNT_BASE_DIR=""
@@ -826,63 +811,66 @@ get_mount_base() {
 }
 ```
 
-которая по названию образа `IMAGE_NAME`, позволяет определить базовую точку монтирования в каталоге `MOUNT_DIR`, так как образ составной и может содержать N разделов, каждый из который в свою очередь монтируется под именами part1, part2 и т.д. это переход к однотипному именованию, для любого raw образа.
+This function uses the image name `IMAGE_NAME` to determine the base mount point within the `MOUNT_DIR` directory. Since the image is composite and may contain N partitions, each partition is mounted under standardized names (part1, part2, etc.). This establishes consistent naming conventions for any raw image.
 
-Здесь еще устанавливается переменная сокращенного названия образа:
+Additionally, it sets a variable for the shortened image name.
 
-например из:
-core-image-minimal-raspberrypi4-64.rootfs.wic
-получиться => core-image-minimal-raspberrypi4-64.rootfs
+For example:
+From: core-image-minimal-raspberrypi4-64.rootfs.wic
+To: core-image-minimal-raspberrypi4-64.rootfs
 
-для размонтирования, я использую umount_raw_image с теме же переменными окружения:
+For unmounting, I use `umount_raw_image()` with the same environment variables:
 
 ```lua
 umount_raw_image() {
   if [[ -z "${IMAGE_DIR}" || -z "${IMAGE_NAME}" || -z "${MOUNT_DIR}" ]]; then
-      echo "Ошибка: Установите переменные окружения IMAGE_DIR, IMAGE_NAME и MOUNT_DIR" >&2; return 1
+    echo "Error: Set environment variables IMAGE_DIR, IMAGE_NAME, and MOUNT_DIR" >&2; return 1
   fi
 
   get_mount_base
   local name_without_ext="${IMAGE_NAME%.*}"
   if [ ! -d ${MOUNT_BASE_DIR} ]; then
-      echo "Ошибка: Директория ${MOUNT_BASE_DIR} не найдена, выход..." >&2; return 2
+    echo "Error: ${MOUNT_BASE_DIR} not found, exiting ..." >&2; return 2
   fi
 
   local mounted_parts=("${MOUNT_BASE_DIR}"/part*)
   if [[ -e "${mounted_parts[0]}" ]]; then
-      for mount_point in "${mounted_parts[@]}"; do
-          if mountpoint -q "${mount_point}"; then
-              sudo umount "${mount_point}"
-              if [[ $? -eq 0 ]]; then echo "Размонтирование ${mount_point} выполнено успешно"
-              else echo "Ошибка: Не удалось размонтировать ${mount_point}" >&2; fi
-          else
-              echo "Предупреждение: ${mount_point} не смонтирован" >&2
-          fi
-      done
+    for mount_point in "${mounted_parts[@]}"; do
+      if mountpoint -q "${mount_point}"; then
+        echo "sudo umount ${mount_point}"
+        sudo umount "${mount_point}"
+        if [[ $? -eq 0 ]]; then echo "Successfully unmounted ${mount_point}"
+        else echo "Error: Failed to unmount ${mount_point}" >&2; fi
+      else
+        echo "Warning: ${mount_point} is not mounted" >&2
+      fi
+    done
   else
-      echo "Не найдено смонтированных разделов в ${MOUNT_DIR}/${name_without_ext}"
+      echo "No mounted partitions found in ${MOUNT_DIR}/${name_without_ext}"
   fi
 
   local image_file="${IMAGE_DIR}/${IMAGE_NAME}"
   if [[ -f "${image_file}" ]]; then
-      local loop_devices
-      loop_devices=$(losetup -j "${image_file}" | awk -F: '{print $1}')
-      for loop_dev in ${loop_devices}; do
-          sudo losetup -d "${loop_dev}"
-          if [[ $? -eq 0 ]]; then echo "Loop-устройство ${loop_dev} успешно отсоединено"
-          else echo "Ошибка: Не удалось отсоединить loop-устройство ${loop_dev}" >&2; fi
-      done
+    local loop_devices
+    loop_devices=$(losetup -j "${image_file}" | awk -F: '{print $1}')
+    for loop_dev in ${loop_devices}; do
+      echo "sudo losetup -d ${loop_dev}"
+      sudo losetup -d "${loop_dev}"
+      if [[ $? -eq 0 ]]; then echo "Successfully detached loop device ${loop_dev}"
+      else echo "Error: Failed to detach loop device ${loop_dev}" >&2; fi
+    done
   else
-      echo "Предупреждение: Файл образа ${image_file} не найден, очистка loop-устройств пропущена" >&2
+    echo "Warning: Image file ${image_file} not found, skipping loop device cleanup" >&2
   fi
 }
 ```
 
-С функциями `mount_raw_image()` и `umount_raw_image()` я могу приступить к загрузке по сети.
+With the `mount_raw_image()` and `umount_raw_image()` functions implemented, I can now proceed with network boot setup. 
 
-Для этого буду использовать Buster Slim докер - "debian:buster-slim":
+For this purpose, I'll utilize the Buster Slim Docker container: "debian:buster-slim".
 
-## Настройка DHCP, TFTP и NFS сервера
+
+## Configuring DHCP, TFTP, and NFS servers
 
 ```dart
 docker
@@ -905,7 +893,7 @@ docker
         └── enable_uart.txt
 ```
 
-Основной файл докера:
+Main Dockerfile:
 
 ```dart
 FROM debian:buster-slim
@@ -940,26 +928,28 @@ RUN chmod u+x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 ```
 
-Здесь устанавливаются три основных сервера, нужные мне для сетевой загрузки: DHCP, TFTP и NFS.
+This installation configures three core servers essential for network booting: DHCP, TFTP, and NFS.
 
-Скрипт для запуска `entrypoint.sh` выглядит так:
+The launch script `entrypoint.sh` appears as follows:
 
 ```bash
 #!/bin/sh
 
-# перехват сигнала остановки процесса по Ctrl+C или docker stop
-# и вызов функции stop для корректного завершения сервисов
+# Make sure we react to these signals by running stop() when we see them - for clean shutdown
+# And then exiting
 trap "stop; exit 0;" TERM INT
 
 stop()
 {
-    echo "Получен SIGTERM, завершаем процессы..."
-    echo "Остановка NFS..."
+# We're here because we've seen SIGTERM, likely via a Docker stop command or similar
+# Let's shutdown cleanly
+    echo "SIGTERM caught, terminating process(es)..."
+    echo "NFS Terminate..."
     exportfs -uav
     service nfs-kernel-server stop
-    echo "Остановка TFTP..."
+    echo "TFTP Terminate..."
     service tftpd-hpa stop
-    echo "Остановка DHCP..."
+    echo "DHCP Terminate..."
     service isc-dhcp-server stop
 
     exit 0
@@ -967,18 +957,18 @@ stop()
 
 start()
 {
-    echo "Запуск сервисов..."
-    echo "Инициализация DHCP..."
+    echo "Starting services..."
+    echo "DHCP init..."
     service isc-dhcp-server start
-    echo "Инициализация TFTP..."
+    echo "TFTP init..."
     service tftpd-hpa start
-    echo "Инициализация NFS..."
+    echo "NFS init..."
     service rpcbind start
     service nfs-common start
     service nfs-kernel-server start
     exportfs -rva
 
-    echo "Сервисы запущены..."
+    echo "Started..."
     while true; do sleep 1; done
 
     exit 0
@@ -987,7 +977,7 @@ start()
 start
 ```
 
-для запуска Buster Slim служит Makefile:
+To launch the Buster Slim container, a Makefile is used:
 
 ```bash
 IMAGE=dhcp_tftp_nfs
@@ -1041,14 +1031,14 @@ clean-all-container:
 .PHONY: run build clean-all-container
 ```
 
-Здесь докер запускается в привилегированном режиме и в процессе запуска он пробрасывает несколько основных конфигурационных файлов для DHCP и NFS.
+Here, Docker runs in privileged mode and mounts several core configuration files for DHCP and NFS during startup.
 
-В самом простом случае, для запуска вы можете настроить следующие файлы для конфигурации сетевого интерфейса в докере:
+For the most basic setup, you can configure the following network interface files within Docker:
 
 ```lua
-#######################################
-# конфигурация /etc/network/interfaces
-#####################################
+########################################
+# configuration /etc/network/interfaces
+######################################
 auto lo
 iface lo inet loopback
 
@@ -1058,21 +1048,21 @@ address 10.0.7.1
 netmask 255.255.255.0
 ```
 
-Так как докер Buster Slim запускается в сетевом режиме хоста, параметр "--network=host", то и название сетевого интерфейса обязательно должно быть как на хосте, здесь это для примера "eth0".
+Since the Buster Slim container runs in host network mode (--network=host), the network interface name must match the host's interface - in this example, "eth0".
 
-Конфигурация DHCP сервера в докере:
+DHCP server configuration within Docker:
 
 ```lua
-############################################
-# конфигурация /etc/default/isc-dhcp-server
-##########################################
+#############################################
+# configuration /etc/default/isc-dhcp-server
+###########################################
 DHCPDv4_CONF=/etc/dhcp/dhcpd.conf
 DHCPDv4_PID=/var/run/dhcpd.pid
 INTERFACESv4="eth0"
 
-####################################
-# конфигурация /etc/dhcp/dhcpd.conf
-##################################
+#####################################
+# configuration /etc/dhcp/dhcpd.conf
+###################################
 option domain-name "example.org";
 option domain-name-servers ns1.example.org;
 default-lease-time 600;
@@ -1088,41 +1078,41 @@ subnet 10.0.7.0 netmask 255.255.255.0 {
 }
 ```
 
-Для DHCP в первую очередь необходимо указать слушающий сетевой интерфейс, на котором все и работает, это тоже имя, что и на хосте, далее указывается диапазон пула динамических адресов, адрес шлюза, маска сети, адрес TFTP сервера, который раздает и главное, это первичный загрузчик для сетевой загрузки "bootcode.bin" (здесь у меня есть вопросы называть ли его первичным или вторичным, но не в этом суть).
+For DHCP configuration, you must first specify the listening network interface - which must match the host's interface name. Next, define: the dynamic address pool range, gateway address, subnet mask, TFTP server address (which distributes files), and crucially, the primary network bootloader "bootcode.bin" (though I have questions about whether it's truly primary or secondary - but that's not the core issue here).
 
-Здесь главное, что если вы загружаете плату Raspberry Pi 4 по сети, то этот загрузчик обязательно должен быть в корне TFTP сервера, иначе никто ни к кому по сети не приедет.
+The critical point is: when network-booting a Raspberry Pi 4, this bootloader must reside in the TFTP server's root directory. Otherwise, the boot process fails completely.
 
-По умолчанию, плата Raspberry Pi 4 настроена на загрузку с microSD карты памяти, далее приоритет загрузки уменьшается возможно это USB, и далее идет загрузка с использованием сетевой карты.
+By default, Raspberry Pi 4 prioritizes booting from microSD cards first, followed by USB devices, with network boot as the last option.
 
-Вы можете это легко проверить, подключив к плате монитор по HDMI интерфейсу и вытащив SD карту памяти подайте на нее питание. Так как не SD карты, не USB диска не подключено, то должна запуститься сетевая загрузка, это вы увидите на экране монитора, по красивой заставке с надписью о запуске «сетевой загрузки».
+You can easily verify this: Connect an HDMI monitor, remove the SD card, and power on the board. With no SD card or USB drive connected, network boot should initiate - visible through the beautiful splash screen displaying a «network boot» startup message.
 
-Если что то не так, то можно обновить переменную в EEPROM отвечающую за порядок загрузки Raspberry Pi 4:
+If issues persist, you may need to update the EEPROM variable controlling Raspberry Pi 4's boot order:
 
 ```lua
 ################################
-# на Desktop компьютере
+# On Desktop computer
 ################################
-# установите Raspberry Pi Imager
+# Install Raspberry Pi Imager
 sudo apt install rpi-imager
 
-# вставьте в картридер microSD карту для записи обновления EEPROM
-# с помощью запуска программы rpi-imager
+# Insert microSD card into card reader for EEPROM update
+# Launch rpi-imager program
 rpi-imager
 
-# Выберите устанавливаемую операционную систему (CHOOSE OS)
+# Select OS to install (CHOOSE OS)
 => Misc utility images (Bootloader EEPROM configuration)
 => Bootloader (Pi 4 family)
 
-# Выбирайте один из трех образов, с разными приоритетами загрузки
-# советую выбирать приоритет загрузки SD => USB => network
-# т.е. загрузка по сети с наименьшим приоритетом
+# Choose one of three images with different boot priorities
+# Recommend selecting boot priority: SD => USB => network
+# i.e., network boot has lowest priority
 
-# Подождите окончания записи, и если все ОК,
-# подключите SD карту памяти к Raspberry Pi 4
-# Если вы подключите отладочный USB-uart к GPIO то сможете увидеть процесс обновления
+# Wait for write completion. If successful,
+# connect SD card to Raspberry Pi 4
+# If you connect debug USB-UART to GPIO, you can monitor update process
 sudo picocom --baud 115200 /dev/ttyUSB0
 
-# после подачи питания на плату по UARТ хотя бы можно понять что происходит, например:
+# After powering the board, UART at least shows progress, e.g.:
 ...
 Reading EEPROM: 524288
 Writing EEPROM
@@ -1131,16 +1121,15 @@ Verify BOOT EEPROM
 Reading EEPROM: 524288
 BOOT-EEPROM: UPDATED
 
-# если UART(A) нет то следите за светодиодами, они подскажут
+# If no UART(A), monitor LEDs - they provide status clues
 ```
 
-
-Конфигурация NFS сервера в докере:
+NFS server configuration in Docker:
 
 ```lua
-##############################################
-# конфигурация /etc/default/nfs-kernel-server
-############################################
+###############################################
+# configuration /etc/default/nfs-kernel-server
+#############################################
 # Number of servers to start up
 RPCNFSDCOUNT=8
 # Runtime priority of server (see nice(1))
@@ -1153,48 +1142,47 @@ RPCSVCGSSDOPTS=""
 # Options for rpc.nfsd. (cat /proc/fs/nfsd/versions)
 RPCNFSDOPTS="--nfs-version 4.2"
 
-###########################
-# конфигурация /etc/export
-#########################
+############################
+# configuration /etc/export
+##########################
 /nfs  *(rw,fsid=0,sync,no_subtree_check,no_root_squash,no_all_squash,crossmnt)
 ```
 
-Здесь я во возможности включаю версию 4, но остальные версии то же должны работать.
+Here I enable version 4 where possible, though other versions should also work.
 
-Конфигурация NFS экспорта:
+NFS export configuration:
 
-* `rw` разрешение чтения и записи;
-* `fsid=0` указывает, что это корневой экспорт для NFSv4. В NFSv4 клиенты монтируют "виртуальную"
-  корневую файловую систему (например, /), а все остальные экспорты становятся её поддиректориями;
-* `sync` требует синхронной записи данных на диск перед подтверждением операции,
-  это гарантия целостности данных, ну и медлительности конечно;
-* `no_subtree_check` отключить проверку нахождения файла внутри экспортированной директории при каждом запросе;
-* `no_root_squash` не преобразовывать права пользователя root с клиента в анонимного пользователя,
-  дает клиентам полный root-доступ к файлам на сервере, но так как у нас корневая rootfs полноценной ОС,
-  он нам нужен, иначе наша запускаемая ОС нормально работать не будет;
-* `no_all_squash` не преобразовывать права всех пользователей в анонимного пользователя,
-  cохраняет оригинальные UID/GID пользователей клиента на сервере, тоже нужен, см. предыдущий пункт.
+* `rw` - read and write permission;
+* `fsid=0` - specifies this as the root export for NFSv4. In NFSv4, clients mount a "virtual"
+  root filesystem (e.g., /), with all other exports becoming its subdirectories;
+* `sync` - requires synchronous disk writes before acknowledging operations,
+  guaranteeing data integrity at the cost of performance;
+* `no_subtree_check` - disables verification that files are within the exported directory on each access request;
+* `no_root_squash` - preserves root user permissions from the client (no mapping to anonymous user).
+  Grants clients full root access to server files. Essential for bootable OS rootfs since
+  the launched OS wouldn't function properly otherwise;
+* `no_all_squash` - preserves original UID/GID of client users on the server (no anonymous mapping).
+  Also essential - see previous point.
 
-Еще бы хотел отметить что именно с NFS сервером, у меня наблюдались некоторые проблемы:
+I'd also like to note that specifically with the NFS server, I encountered several issues:
 
-- Во первых он может работать только единолично, т.е. если запустить два таких докера, то второй
-  будет мешать первому, исключаем это тем, что запускаем этот докер
-  без фонового режима (убираю make run_detach),
-  и перед запуском всегда останавливаю все найденные докеры с таким названием;
-- Во вторых в режиме network=host докер будет использовать модуль хостового ядра, нужен "modprobe nfsd"
-  перед запуском докера;
-- В третьих перед запуском докера, нужно выключить rpcbind сервис на хосте, он тоже мешает докеру
-  так что если ваш Desktop компьютер не может отказаться от `rpcbind`, то загрузку можно и отложить,
-  имейте это ввиду.
+- First, it can only operate exclusively - meaning if you run two such Docker containers, the second
+  will interfere with the first. I solve this by running the container
+  without background mode (removing `make run_detach`),
+  and always stopping all found containers with this name before launching;
+- Second, in `network=host` mode, Docker will use the host's kernel module, requiring `modprobe nfsd`
+  before starting the container;
+- Third, before launching the container, you need to disable the `rpcbind` service on the host 
+  as it also interferes with Docker.
+  So if your desktop computer can't do without `rpcbind`, you might need to postpone the boot process,
+  keep this in mind.
 
 ```cmake
-if ps aux | grep -q /sbin/rpcbind; then
-    sudo systemctl stop rpcbind.socket;
-    sudo systemctl stop rpcbind;
-fi
+sudo modprobe nfsd
+@sudo systemctl stop rpcbind.socket rpcbind > /dev/null 2>&1 || true
 ```
 
-Еще раз вернемся к Makefile Buster Slim(а):
+Let's revisit the Buster Slim Makefile once more:
 
 ```lua
 ...
@@ -1210,61 +1198,62 @@ IP_MASK2="24"
 IP_RANGE="range 10.0.7.100 10.0.7.200"
 ```
 
+The `HOST_NET_IFACE` variable specifies the name of the host network interface that matches what's defined in `/etc/network/interfaces` and `/etc/default/isc-dhcp-server`.
 
-В переменной `HOST_NET_IFACE` прописывается название того же сетевого интерфейса хоста, который указан в `/etc/network/interfaces` и `/etc/default/isc-dhcp-server`. 
+When working with Docker, I first execute the shell script `docker/dhcp_tftp_nfs/reconfig_net.sh` to automatically configure `/etc/network/interfaces`, `/etc/default/isc-dhcp-server`, and several other files.
 
-При работе с докером у меня вначале вызывается shell скрипт `docker/dhcp_tftp_nfs/reconfig_net.sh` для автоматической настройки `/etc/network/interfaces` и `/etc/default/isc-dhcp-server`, а также некоторых других файлов.
+This reconfiguration occurs only when the Makefile variable `HOST_NET_IFACE=""` is empty.
 
-И эта перенастройка выполняется в том случае, если
-переменная Makefile:  HOST_NET_IFACE="" пустая.
+After reconfiguration, the script updates this variable with the identified local network interface name (e.g., `HOST_NET_IFACE="eth0"`), meaning the setup effectively runs just once.
 
-После перенастройки, скрипт меняет эту переменную, вносит название найденного локального сетевого интерфейса  (например HOST_NET_IFACE="eth0"), фактически настройка выполняется только один раз. 
-
-Скрипт reconfig_net.sh для настройки использует переменные из `Makefile`:
-`IP_ADDR` `IP_SUBNET` `IP_MASK IP_RANGE`, так что можно попробовать и свою локальную конфигурацию добавить. Но здесь есть одна проблема, я определяю локальный сетевой интерфейс хост компьютера так:
+The `reconfig_net.sh` script uses these variables from the `Makefile` for configuration:  
+`IP_ADDR` `IP_SUBNET` `IP_MASK` `IP_RANGE`  
+allowing you to add custom local configurations. However, there's one challenge: I identify the host computer's local network interface as follows:
 
 ```lua
 ip link show | awk -F: '$0 !~ "lo|vir|docker|veth|br|wl" {print $2; getline; print $2}' | tr -d ' ' | head -n 1
 
-# и если вдруг у вас два локальных сетевых интерфейса,
-# то это может не сработать
-# и вам будет нужно настраивать
-# приведенные выше файлы самостоятельно
+# and if you happen to have two local network interfaces,
+# this might not work
+# requiring you to manually configure
+# the aforementioned files
 
-# еще есть вопрос
-# к переменной IP_TFTP="10.0.7.1" в func.sh
-# сейчас она статическая
-# и нужно в случае изменения IP_ADDR в Makefile
-# также и ее изменить.
+# there's also an issue
+# with the IP_TFTP="10.0.7.1" variable in func.sh
+# currently it is static
+# meaning if you change IP_ADDR in the Makefile
+# you must also update this variable
 ```
 
-Также в Makefile указаны основные, базовые каталоги `TFTP_DIR` и `NFS_DIR`, которые всегда прокидываются в докер при старте, это может быть например символическая ссылка на каталог, который представляет собой точку монтирования, полученную в результате работы функции `mount_raw_image`.
+The Makefile also specifies core base directories `TFTP_DIR` and `NFS_DIR`, which are always mounted into Docker at startup. These could be symbolic links to directories representing mount points obtained through the `mount_raw_image()` function.
 
-Для core-image-minimal-raspberrypi4-64.rootfs.wic например:
-ссылка /tmp/docker/tftp => core-image-minimal-raspberrypi4-64.rootfs/part1
-ссылка /tmp/docker/nfs  => core-image-minimal-raspberrypi4-64.rootfs/part2
+For `core-image-minimal-raspberrypi4-64.rootfs.wic` for example:  
+link `/tmp/docker/tftp` => `core-image-minimal-raspberrypi4-64.rootfs/part1`  
+link `/tmp/docker/nfs`  => `core-image-minimal-raspberrypi4-64.rootfs/part2`
 
-Загрузочный раздел отдаем в распоряжение TFTP, а корневой rootfs раздел отдаем NFS серверу.
+We serve the boot partition via TFTP, while the root rootfs partition is served by the NFS server.
 
-На что же это похоже: Buster Slim не подвел, у нас намечается **«Большой распил образов»**.
+What does this resemble? Buster Slim hasn't failed us - we're about to witness "The Grand Image Dissection".
 
-## Распил образов
 
-Итак чем же хорош распил образов, а тем что вам становиться все равно, что вообще грузить, хочешь «Raspbian», хочешь «Бубунту», хочешь «mcom03» (но это исключительно для друзей Элвиса), и далее мы с вами что то из этого перечня загрузим, добавив несколько десятков строк bash кода и корректируя докер.
+## Image Dissection
 
-Докер Buster Slim в данном случае творит чудеса. Это крутая разборка. 
+So what's great about image dissection? It makes you completely indifferent to what you load - whether it's "Raspbian", "Bubuntu", or "mcom03" (exclusively for Elvis' friends). Later, we'll load something from this list by adding a few dozen lines of bash code and tweaking Docker.
 
-Еще интересно что все равно не только что грузить, но и куда грузить, т.е. выбрасываем Raspberry Pi 4, цепляем сетевым кабелем соседний компьютер (если у него есть конечно поддержка сетевой pxe загрузки), выбираем загрузку с сетевой карты в BIOS, добавляем еще секцию bash кода и грузим этот компьютер.
+In this scenario, the Buster Slim Docker **works wonders**. This is an awesome breakdown.
 
-Задача: загрузить все что есть в прямой видимости.
+What's equally fascinating is that it doesn't matter what you load - but also where you load it. Throw away the Raspberry Pi 4, connect via Ethernet to a neighboring computer (if it supports PXE network boot), select network boot in BIOS, add another bash code section, and boot that computer.
 
-В некоторых случаях, когда образ загружен он будет считать что работает нативно, для Raspbian например физически образ это один файл содержащий таблицу разделов и логические диски, после монтирования через losetup образ распиливается на несколько логических дисков (обычно два), и каждая из точек монтирования будет вести себя так, как позволяет ее файловая система, в ext4 например можно писать, в ISO только читать и т.д.
+Mission: Load all assets within visual range.
 
-Свободного места в образе обычно не много, так как это важный критерий увеличения размера файла образа, но это можно исправить для долгосрочного использования одного и того же образа, ведь хороший образ должен всегда быть под рукой.
+In some cases, when an image is loaded, it will think it's running natively. For Raspbian, the image is physically a single file containing a partition table and logical drives. After mounting via `losetup`, the image gets dissected into multiple logical drives (usually two), and each mount point will behave according to its filesystem capabilities - ext4 allows writing, ISO is read-only, etc.
 
-## Загрузка core-image-minimal (wic) образа на Raspberry Pi 4 по сети
+Free space in the image is usually limited since minimizing image size is crucial, but this can be fixed for long-term use of the same image. After all, a good image should always be at hand.
 
-Итак код верхнего уровня, который запускает загрузку по сети:
+
+## Loading core-image-minimal (wic) image onto Raspberry Pi 4 over the network
+
+So the top-level code that initiates network boot:
 
 ```lua
 start_netboot_rpi4() {
@@ -1274,7 +1263,7 @@ start_netboot_rpi4() {
 }
 ```
 
-далее функция mount_raw_rpi4:
+Next, the `mount_raw_rpi4()` function:
 
 ```lua
 mount_raw_rpi4() {
@@ -1291,54 +1280,55 @@ mount_raw_rpi4() {
 }
 ```
 
-Здесь вначале я монтирую выбранный образ через losetup и после того, как все подмонтировалось:
-- меняю название загрузчика для DHCP сервера => на
-  option bootfile-name "bootcode.bin";
-- меняю параметры ядра для сетевой загрузки в штатном cmdline.txt файле первого,
-  загрузочного раздела образа => на
+Here I first mount the selected image using `losetup`, and after everything is mounted:
+- Change the loader name for the DHCP server => to  
+  `option bootfile-name "bootcode.bin";`
+- Modify the kernel parameters for network boot in the standard `cmdline.txt` file on the first,  
+  bootable partition of the image => to  
   `console=serial0,115200 console=tty1 root=/dev/nfs nfsroot=10.0.7.1:/nfs,hard,nolock,vers=3 rw ip=dhcp rootwait`
-- прокидываю правильные точки монтирования в наш TFTP и NFS сервер;
-- и исправляю проблему с которой столкнулся, при выводе изображения, включаю более старый видео драйвер
-  (сильно не разбирался из за чего, но слой meta-raspberry беру как есть, ничего не меняя)
+- Map the correct mount points to our TFTP and NFS server;
+- Fix an issue I encountered during display output by enabling an older video driver  
+  (didn't investigate deeply why, but I take the `meta-raspberrypi` layer as-is without modifications)
 
-Что хотелось бы отметить:
+What I'd like to note:
 
-Список файлов которые запрашивает наш проприетарный **bootcode.bin** похоже жестко в нем зашиты, у меня не получилось изменить имя файла ядра, меняя штатный **config.txt** на первом разделе:
+The list of files requested by our closed-source **bootcode.bin** appears to be hardcoded in it.  
+I couldn't change the kernel filename by modifying the standard **config.txt** on the first partition:
 
 ```lua
-kernel=название_файла_ядра
+kernel=kernel_filename
 ```
 
-Есть еще привязка к каталогу со стандартным именем для конкретной платы в корне tftp
-`<serial_number>/config.txt`
-но мне это не подходит, мне нужно загрузить любую плату, поэтому можно попробовать просто
-подсунуть `bootcode.bin` то название, которое он хочет, создав копию ядра (на fat ссылки не работают) или
-переименовав то ядро, которое есть на первом разделе, в ожидаемое загрузчиком, если места там впритык.
+There's also a binding to a directory with a standard name for a specific board in the TFTP root:  
+`<serial_number>/config.txt`  
+but this doesn't work for me - I need to boot any board. Therefore, we could try:  
+Simply supply `bootcode.bin` with the filename it expects by either:
+- Creating a copy of the kernel (symlinks don't work on FAT)
+- Renaming the existing kernel on the first partition to what the loader expects (if space is tight there)
 
-Для `YoctoDemoMinimal` (ветка scarthgap), этого делать не пришлось, название оказалось уже правильным.
+For `YoctoDemoMinimal` (scarthgap branch), I didn't need to do this - the name was already correct.
 
-Чтобы узнать что нужно `bootcode.bin` можно посмотреть протокол запросов на хосте:
+To discover what `bootcode.bin` requires, you can examine the request protocol on the host:
 
 ```lua
 sudo tcpdump -i eth0 -vvv -n "(port 67 or port 68) or (udp port 69)"
 ```
 
-также не забудьте изменить название вашего сетевого интерфейса хоста
+Also don't forget to change the name of your host network interface.
 
-Разберем параметры:
+Let's break down the parameters:
 
-* console=serial0,115200 console=tty1: включает вывод на последовательный порт (serial0) и консоль (tty1);
-* root=/dev/nfs: указывает, что корневая файловая система будет загружена по NFS;
-* nfsroot=10.0.7.1:/nfs,hard,nolock: 
-  - IP-адрес NFS-сервера и экспортируемый каталог;
-  - hard: — указывает, что операции должны быть повторены в случае сбоя;
-  - nolock — отключает использование блокировок (рекомендуется для NFSv4);
-* rw монтирует корневую файловую систему с правами на чтение и запись;
-* ip=dhcp указывает, что IP-адрес должен быть получен через DHCP;
-* rootwait ожидает, пока корневая файловая система не будет готова.
+* `console=serial0,115200 console=tty1`: enables output to serial port (serial0) and console (tty1);
+* `root=/dev/nfs`: specifies that the root filesystem will be loaded via NFS;
+* `nfsroot=10.0.7.1:/nfs,hard,nolock`: 
+  - IP address of the NFS server and exported directory;
+  - `hard`: specifies that operations should be retried on failure;
+  - `nolock`: disables file locking (recommended for NFSv4);
+* `rw`: mounts the root filesystem with read-write permissions;
+* `ip=dhcp`: specifies that IP address should be obtained via DHCP;
+* `rootwait`: waits until the root filesystem is ready.
 
-
-В самом начале функции `mount_raw_rpi4` идет инициализация переменных среды для выбора загружаемого образа:
+At the very beginning of the `mount_raw_rpi4()` function, environment variables are initialized to select the bootable image:
 
 ```lua
 set_env_raw_rpi4() {
@@ -1358,9 +1348,11 @@ set_env_raw_rpi4() {
 }
 ```
 
-Функция `find_name_image` ищет есть ли вообще хоть какие либо подходящие образы, если они есть, вам будет предложен список из N пунктов в консоли, где вы можете ввести номер от 1 до N, если вы выбрали архивный образ, он будет распакован и будут настроены переменные среды на возможную загрузку этого образа через mount_raw_image.
+The `find_name_image()` function checks if there are any suitable images available. If images exist, you'll be presented with a numbered list (1 to N) in the console. If you select an archived image:
+- it will be unpacked;
+- environment variables will be configured for potential loading via `mount_raw_image()`.
 
-У меня есть еще функция, которая возвращает файлы образа `config.txt` и `cmdline.txt` в первоначальное состояние, вдруг вы захотите этот образ прошить на SD карту командой dd, после каких нибудь манипуляций, всякое бывает.
+I also have a cleanup function that restores the image's `config.txt` and `cmdline.txt` files to their original state. This is useful if you later decide to flash the image to an SD card using `dd` after manipulations - you never know what might happen.
 
 ```lua
 restore_image_rpi4() {
@@ -1375,18 +1367,18 @@ restore_image_rpi4() {
 }
 ```
 
-Перед тем, как что то восстанавливать, не забудьте, что на загруженном образе лучше набрать poweroff и подождать, пока корневая файловая система NFS корректно отмонтируется.
+Before restoring anything, remember to execute `poweroff` on the booted system and wait for the NFS root filesystem to unmount properly.
 
-После выключения Raspberry Pi 4, можно корректно отключать и все точки монтирования. Но еще не забудьте выключить сам докер, он запускается в терминале VSCode и ждет завершения по Ctrl+C или docker stop hash_container, это надо учитывать.
+After shutting down the Raspberry Pi 4, you can safely unmount all mount points. But also don't forget to stop the Docker container - it runs in the VSCode terminal and waits for termination via Ctrl+C or `docker stop hash_container` (this is important to consider).
 
-Далее вызываем `restore_image_rpi4` и если все Оk, можно попробовать образ записать. Если образ архивный, то для функции `sdcard_deploy` вам еще нужно будет переписать файл вручную из tmp_mount в каталог с образами по умолчанию (не предусмотрел пока).
+Next, call `restore_image_rpi4()`. If everything is OK, you can attempt to write the image. If it's an archived image, you'll need to manually move the file from `tmp_mount` to the default images directory for the `sdcard_deploy` function (I haven't automated this yet).
 
-Заодно проверите, есть ли проблема `dtoverlay=vc4-kms-v3d` (или это только у меня такое). Если проблема есть, то вам понадобиться отладочный UART, видео нет, ничего не видно, или же вы можете сразу на SD карте подкорректировать **`config.txt`** после копирования raw образа командой dd.
+While at it, check if the `dtoverlay=vc4-kms-v3d` issue persists (or is it just my setup?). If the problem exists, you'll need a debug UART - no video output will be visible. Alternatively, you can directly modify **`config.txt`** on the SD card after copying the raw image using `dd`.
 
 
-## Сетевая загрузка Raspbian для платы Raspberry Pi 4
+## Network Boot for Raspbian on Raspberry Pi 4 Board
 
-Итак код верхнего уровня, загрузка по сети для Raspbian:
+So the top-level code for Raspbian network boot:
 
 ```lua
 start_netboot_raspios() {
@@ -1396,7 +1388,7 @@ start_netboot_raspios() {
 }
 ```
 
-далее:
+next:
 
 ```lua
 set_env_raw_raspios() {
@@ -1418,14 +1410,14 @@ mount_raw_raspios() {
 }
 ```
 
-Здесь меняю на загрузочном разделе fat штатный `cmdline.txt` на такой:
+Here I modify the standard `cmdline.txt` on the FAT boot partition to this:
 
 ```lua
 console=serial0,115200 console=tty1 root=/dev/nfs nfsroot=10.0.7.1:/nfs,hard,nolock,vers=3 rw ip=dhcp rootwait
 ```
 
-И еще, для того, чтобы все прошло гладко, нужно модифицировать штатный `/etc/fstab` в образе Raspbian:
-(иначе не полетит, проверять будет, пытаться и проверять и долго так)
+Additionally, to ensure everything works smoothly, you need to modify the standard `/etc/fstab` in the Raspbian image:  
+(Otherwise it won't work - it will keep checking, attempting to verify, and hang indefinitely)
 
 ```lua
 disable_partuuid_fstab_for_raspios() {
@@ -1451,8 +1443,7 @@ restore_partuuid_fstab_for_raspios() {
 }
 ```
 
-А мы его с вами обманем и диски `PARTUUID=` закоментируем под root(ом), а потом если нужно, снова включим,
-оставив образ для возможности прошить на SD карту командой dd:
+But we'll outsmart it: comment out the `PARTUUID=` disks under root privileges. Later if needed, we can re-enable them, preserving the image's ability to be flashed to an SD card with `dd`:
 
 ```lua
 restore_image_raspios() {
@@ -1467,19 +1458,19 @@ restore_image_raspios() {
 }
 ```
 
-Примечание: в config.txt еще включается отладка по UART, его можно к GPIO пинам подцепить, поэтому он тоже восстанавливается как был у `Raspbian`(RaspiOS).
+Note: UART debugging is also enabled in `config.txt` - it can be connected to GPIO pins. This setting is restored to the original `Raspbian` (RaspiOS) configuration.
 
 
-## Автоматический анализ сборочных Yocto логов с помощью нейронной сети Deepseek
+## Automated Analysis of Yocto Build Logs Using Deepseek Neural Network
 
-Следующей функцией которая мне еще нужна, является функция ускоренного анализа каких либо сборочных логов и исправления Yocto ошибок, что бы совсем быстро и конечно в этом случае очень пригодится какая нибудь нейронная сеть, пусть она по возможности дает советы по исправлению ошибок, в идеале мне нужно лог сборки напрямую перенаправить на вход нейронной сети, без посредников.
+The next function I need is accelerated analysis of build logs and fixing Yocto errors. For this, some neural network would be extremely useful to provide repair suggestions. Ideally, I want to pipe build logs directly into the neural network without intermediaries. 
 
-А то сидишь копируешь одну простыню ошибок из одной консоли, вставляешь ее в окно браузера куда нибудь на chat.deepseek.com это жутко долго, это очень утомительно, итак приступим:
+Manually copying error walls from one console and pasting them into browser windows like chat.deepseek.com is terribly slow and exhausting. Let's begin:
 
-Установка и запуск DeepSeek через Ollama оказался на редкость простым, тот же Stable Diffusion помню пол дня устанавливал, то это не то, то другое, а здесь просто магия какая то, полностью скрытая от пользователя и это реально круто.
+Installing and running DeepSeek through Ollama proved remarkably simple. I remember spending half a day installing Stable Diffusion - dependencies here, components there. But here? Pure magic - completely hidden from the user, and truly awesome.
 
 ```lua
-# модель весит 4.9 Гб и сама ollama ~3 Гб
+# the Model size 4.9 Гб and Ollama itself ~3 Гб
 DEEPSEEK_MODEL="deepseek-r1:8b"
 install_deepseek() {
     curl -fsSL https://ollama.com/install.sh | sh
@@ -1488,21 +1479,18 @@ install_deepseek() {
 }
 ```
 
-В качестве модели я взял не очень требовательную к ресурсам "deepseek-r1:8b" на 4.9 Гб, размер всей установки потянул примерно на 8Гб свободного места на диске и самое интересное что она как то более дружелюбно относится к русском языку, например более тяжелая версия deepseek-r1:14b ведет себя неприлично, ты ее спрашивает на русском, а она тебе талдычит по английски, иногда переходя на русский, а эта так сразу по русски.
+In my opinion, the local deepseek-r1 can also be used as a translator - very convenient. But for quality advice, you'll still need to visit chat.deepseek.com (or wherever you usually go).
 
-На мой взгляд локальную deepseek-r1 еще можно использовать как переводчик, очень удобно, а за хорошим советом все же придется идти на chat.deepseek.com, ну или куда вы там ходите.
+The `curl` command is used to download the installation script from the specified URL:
 
-Команда curl используется для скачивания скрипта установки с указанного URL:
+* Option `-f` enables "fail silently";
+* Option `-s` makes the request without a progress bar, while `-S` shows errors if anything goes wrong;
+* Option `-L` (follow redirects) automatically redirects the request to a new URL if necessary.  
+The result (`|`) is then piped to `sh`, which executes the downloaded script locally.
 
-* опция -f включает "fail silently" (тихую неудачу);
-* опция -s делает запрос без прогресс-бара, а `-S` показывает ошибки, если что-то идет не так;
-* опция -L (опция "follow redirects") используется для автоматического перенаправления
-  запроса на сервер к новому URL, если это будет необходимо.
-  затем результат (`|`) передается в `sh`, который выполняет скачанный скрипт локально.
+Next, the Ollama server starts and loads the selected model. On first run, the model is downloaded to your local machine.
 
-Далее запускается ollama сервер и запускается выбранная модель. При первом запуске модель, загружается на локальный компьютер.
-
-И сразу приведу код для удаления ollama и всех ее «моделей», посмотрели и хватит:
+And immediately, here's the code to remove Ollama and all its "models" - seen enough?:
 
 ```lua
 unistall_ollama() {
@@ -1529,7 +1517,7 @@ run_deepseek() {
 }
 ```
 
-А вот так в моем понимании может выглядеть анализ Yocto логов в Deepseek, в выходные надеюсь проверю, пока не успеваю, ну как обычно. Нужно или статью писать или код проверять, одновременно не получается. Тут главное, чтобы логи были не очень большими,  если вдруг заметили ошибку определенную, то можно передать. На больших логах точно нейросеть завалите, буфер какой нибудь переполниться и все (как по мне).
+Here's what Yocto log analysis looks like in Deepseek. The key is keeping logs reasonably sized - if you spot a specific error, you can pass just that portion. Large logs will definitely overwhelm the neural network (some buffer will overflow and that's it - in my experience).
 
 ```lua
 yocto_analyze_deepseek() {
@@ -1537,14 +1525,14 @@ yocto_analyze_deepseek() {
   DOCKER_DIR="docker/ubuntu_22_04"
   CONTAINER_NAME="ubuntu_22_04"
   cmd_init="cd /mnt/data; MACHINE=$YO_M source ./setup-environment build"
-  start_cmd_docker "${cmd_init}; ${cmd_runs}" | ollama run ${DEEPSEEK_MODEL} 'проведи анализ логов'
+  start_cmd_docker "${cmd_init}; ${cmd_runs}" | ollama run ${DEEPSEEK_MODEL} 'analyze to check for errors'
 }
 ```
 
 
-## Побочный эффект сборки, загрузка ISO дистрибутива Ubuntu по сети
+## Side Effect of the Build: Network Booting Ubuntu ISO Distribution
 
-Итак код верхнего уровня, который запускает загрузку по сети:
+So the top-level code that initiates network boot:
 
 ```lua
 start_ubuntu_24_04() {
@@ -1555,7 +1543,8 @@ start_ubuntu_24_04() {
   mount_raw_ubuntu && start_session_docker
 }
 ```
-Запускается монтирование `mount_raw_ubuntu` ISO образа и в случае успеха сессия докера в консоли:
+
+The `mount_raw_ubuntu()` ISO image mounting is launched, and on success: a Docker console session starts.
 
 ```lua
 mount_raw_ubuntu() {
@@ -1578,10 +1567,13 @@ mount_raw_ubuntu() {
 }
 ```
 
-Здесь примерно также, как и в **`mount_raw_rpi4`** за исключением того, что в ISO мне ничего не записать, а нужно загрузочное меню и начальная прошивка (начальный загрузчик) для сетевой карты **`pxelinux.0`** в корне TFTP сервера, этот загрузчик берется из отдельного архива netboot.tar.gz, в нем уже все есть для показа загрузочного меню.
+The process here is similar to **`mount_raw_rpi4`**, with one key difference: I can't write directly to the ISO. Instead, I need to prepare:
+- a boot menu
+- initial firmware (bootloader) for the network card: **`pxelinux.0`** in the TFTP server root
 
-Добавляю пункт меню в штатный Убунтовский Netboot, делаю его самым последним:
+This bootloader is extracted from a separate `netboot.tar.gz` archive, which contains everything needed to display the boot menu.
 
+I then add a menu entry to Ubuntu's standard Netboot configuration, placing it at the very bottom:
 
 ```lua
 ...
@@ -1591,11 +1583,11 @@ kernel ubuntu-24.04.2-desktop-amd64/vmlinuz
 append initrd=ubuntu-24.04.2-desktop-amd64/initrd root=/dev/nfs netboot=nfs nfsroot=10.0.7.1:/nfs ip=dhcp nomodeset
 ```
 
-Здесь главное выбрать правильное ядро и initrd, которые из того же дистрибутива что и корневая файловая система, которую вы грузите по NFS. Также надо учитывать что на начальном этапе загрузки PXE о NFS ничего не знает и не умеет, так что ядро и initrd обязательно должны быть на tftp сервере.
+The key here is selecting the correct kernel and initrd that match the same distribution version as the root filesystem you're loading via NFS. Also note: during the initial PXE boot stage, the system doesn't know about NFS and can't handle it, so the kernel and initrd must be on the TFTP server.
 
-Если выбрать новый пункт меню, то начнется загрузка `ubuntu-24.04.2-desktop-amd64`, он не по умолчанию, так что нужно успеть это сделать в течении 5 сек.
+If you select the new menu entry, it will start booting `ubuntu-24.04.2-desktop-amd64`. Since this isn't the default option, you have only 5 seconds to make this selection.
 
-Для того, чтобы не было предупреждения с графическим режимом (у меня 4k монитор и логи загрузки ядра очень маленькие), я добавил отдельно параметр nomodeset, так я выключил жутко надоедливое окно:
+To eliminate the graphical mode warning (on my 4K monitor, kernel boot logs appeared tiny), I added the `nomodeset` parameter separately. This disabled that extremely annoying window:
 
 ```
 Oh no! Something has gone wrong
@@ -1603,19 +1595,18 @@ A problem has occured and the system can't recover
 Please log out and try again
 ```
 
-И наконец появиться волшебное окно  "What do you want ..."
-можно выбрать:
+And finally, the magical "What do you want ..." window will appear. You can choose:
 
 ```
    Install Ubuntu
    Try Ubuntu
 ```
 
-выбрав Try Ubuntu, можно нажать появившуюся кнопку Close и окунуться в мир памяти т.е. есть в полноценный загрузочный live образ для того, чтобы протестировать оборудование, как говориться не отходя от железа, ну о пункте Install Ubuntu я наверно ничего рассказывать не буду, вы и так все знаете.
+Selecting **Try Ubuntu** allows you to click the **Close** button and immerse yourself in a memory-resident live environment. This full bootable live image lets you test hardware "without leaving the metal," as they say. I won't explain the **Install Ubuntu** option - you already know it.
 
-Единственное что проверил, так это подключение интернета в Ubuntu через Wifi подключение т.е. по сетевому интерфейсу мы получаем rootfs файловую систему (NFS), а вот интернет пока можно через Wifi. В Ubuntu при этом правильная маршрутизация сама подключается. Ведь шлюзом по умолчанию во время загрузке по NFS становиться наш хост (10.0.7.1), а при подключении через WiFi интернета, нужно этот маршрут перебить. Ubuntu сама справилась, а вот Raspbian уже нет.
+One thing I verified: Internet connectivity in Ubuntu works via WiFi while simultaneously using NFS for the root filesystem. During boot, our host (10.0.7.1) becomes the default gateway for NFS, but Ubuntu automatically handles routing adjustments when WiFi connects. Note: **Raspbian fails to do this**.
 
-Еще при установке "ubuntu-24.04.2-desktop-amd64.iso" на жесткий диск, установка прервалась из за неправильной контрольной суммы hash пакетов, которые приехали по NFS c хоста. Диск ISO больше 5Гб, и возможно еще с контрольными суммами, где то мне нужно разобраться. Поэтому быстренько добавил загрузку 22.04, с ним у меня проблем не было, имейте и это ввиду.
+During `ubuntu-24.04.2-desktop-amd64.iso` installation to hard drive, the process aborted due to incorrect package hash checksums fetched via NFS. The ISO exceeds 5GB, and checksum verification likely failed somewhere. I quickly added support for **22.04** instead - which worked flawlessly. Keep this in mind.
 
 ```lua
     IMAGE_NAME="ubuntu-22.04.1-desktop-amd64.iso"
@@ -1623,17 +1614,16 @@ Please log out and try again
 ```
 
 
-## Самая красивая кнопка для друзей Элвиса
+## The Most Beautiful Button for Elvis's Friends
 
-Вы спросите почему Элвис:
+You might ask: Why Elvis?
 
-Во первых почти в каждой фирме есть RockStar(s), этакие архетипы на которых все держится, они поймут.
+First, nearly every company has its RockStar(s) - archetypes holding everything together. They'll understand.  
+Second, I sought the most valuable board within reach. At home? Only Banana Republic-grade cheap boards - not worthy. But at work? Found this gem right on the desktop. Worth two of my home PCs. Perfect. This is what we'll boot.
 
-Во вторых я искал самую дорогую для себя плату. Дома не нашел, у меня только банановая республика какая то, платы дешевые и это не солидно. А вот на работе, такая плата нашлась и прямо на рабочем столе, она стоит как два моих домашних компьютера, она подходит. Ее и буду грузить.
+Mission: Conquer U-Boot with a single button press. The board from "Elvis" features the "Skif" processor. Actually two boards (debug + processor) working in tandem, so we'll treat them as one device to frustrate U-Boot.
 
-Задача победить U-Boot одной кнопкой. Плата от "Элвис", на процессоре "Skif". На самом деле платы две отладочная и процессорная, но они работают в связке, так что примем их за одно устройство, будем расстраивать U-Boot.
-
-И кстати, в руководстве на плату не нашел описания возможности сетевой загрузки, решил это как нибудь исправить. Вот код функции для запуска докера, который отвечает за загрузку по сети:
+Interestingly, the board manual lacks network boot documentation. Decided to fix that. Here's the Docker-launching function code for network boot:
 
 ```lua
 start_elvees_skif_24_06() {
@@ -1675,17 +1665,20 @@ start_elvees_skif_24_06() {
 }
 ```
 
-Здесь предусмотрены два режима загрузки:
+Two boot modes are implemented here:
 
-Первый, когда прошивка собрана из исходного кода с помощью Buildroot, это режим для разработчиков, собрали прошивку, запустили докер, инициировали режим сетевой загрузки на плате (об этом ниже), загрузили плату, что то проверили.
+First mode: For firmware built from source using Buildroot - designed for developers.  
+- Build firmware → Launch Docker → Initiate network boot on board (details below) → Boot board → Run tests  
+- Always loads the latest build. If valid:  
+  - SSH directly into the board from host  
+  - Write `rootfs.tar.gz` to eMMC following Elvis documentation  
+  (Full proper deployment)
 
-Всегда загружается самая последняя сборка и если она правильная, то подключаемся к плате по ssh прямо здесь же на хосте, и записываем `rootfs.tar.gz` архив по сети на EMMC диск по инструкции "Элвис", т.е. все как положено.
+Second mode ("Just looking"): When you need instant results without 4-5 hour builds. Load precompiled images from their website. 
 
-Второй режим "только посмотреть", это когда вы хотите все здесь и сейчас и у вас нет 4 или 5 часов на сборку. В этом случае загружаем предкомпиленный образ для платы с их сайта.
+Requires only three magical files (finally no external bootloaders!):
 
-Всего то нам понадобиться только три файла и это здорово, наконец то никаких внешних загрузчиков.
-
-Вот они эти файлы: ядро, dtb и корневая файловая система, причем сразу в архиве.
+kernel, device Tree Blob (dtb) and root filesystem (already archived)  
 
 ```lua
 local files=(
@@ -1695,11 +1688,20 @@ local files=(
 )
 ```
 
-Далее все просто, отдаем ядро серверу TFTP через каталог где это все или собирается или загружается, и распаковываем корневую файловую систему по пути `/tmp/docker/nfs`, под рутом. Обязательно нужно сохранить права на файлы от имени root, иначе systemd в составе загружаемой rootfs по NFS работать не будет, да и еще много чего отвалиться, права процессов надо соблюдать, иначе никак.
+Next, the process is straightforward:
+- Provide the kernel to the TFTP server through the directory where everything is either built or downloaded
+- Unpack the root filesystem at `/tmp/docker/nfs` as root
 
-При распаковке архива будет запрошен пароль администратора. Для U-Boot нужно создать один конфигурационный файл со стандартным именем "pxelinux.cfg/default" в корневом каталоге TFTP сервера.
+⚠️ Critical: File permissions must be preserved during extraction (as root ownership), otherwise:
+  - systemd in the NFS-loaded rootfs will fail
+  - Numerous components will break
+  - Process permissions must be strictly maintained - no exceptions!
 
-Вот такой:
+Archive extraction will prompt for the administrator password.  
+
+For U-Boot, create a single configuration file with the standard name `pxelinux.cfg/default` in the TFTP server root directory:
+
+Here's the configuration:
 
 ```dart
 default linux
@@ -1712,16 +1714,19 @@ devicetree IMAGE_DTB
 append root=/dev/nfs nfsroot=NFS_IP_ADDRESS:/nfs,vers=3 rw earlycon console=ttyS0,115200 console=tty1 ip=dhcp
 ```
 
-Здесь после копирования этого шаблона, будет произведена замена строк:
+After copying this template, perform string replacements:
 
-"IMAGE_DTB" на =>
-elvees/mcom03-elvmc03smarc-r1.0-elvsmarccb-r3.2.1.dtb
+1. Replace `"IMAGE_DTB"` with:  
+   `elvees/mcom03-elvmc03smarc-r1.0-elvsmarccb-r3.2.1.dtb`
 
-и строки "NFS_IP_ADDRESS" => на 10.0.7.1 (переменная "IP_TFTP" в func.sh)
+2. Replace `"NFS_IP_ADDRESS"` with `10.0.7.1`  
+   (value of `IP_TFTP` variable in `func.sh`)
 
-На самой плате Skif от Элвиса, нужно дернуть U-Boot и попросить его **«загрузиться по сети»**, для этого у нас есть технологический кабель USB-typeC, нужно им соединить ваш хост компьютер и плату.
+On the Elvis Skif board itself:  
+- Trigger U-Boot and request **network boot** using the engineering USB-TypeC cable  
+- Connect this cable between your host computer and the board  
 
-И запустить загрузку с помощью следующей функции:
+Then initiate boot using the following function:
 
 ```bash
 start_elvees_skif_netboot() {
@@ -1757,20 +1762,37 @@ EOF
 }
 ```
 
-Эта функция только прикидывается что она bash, на самом деле это не так, это гибрид, инкапсуляция одного языка в другой с помощью EOF(а) - маркера начала и конца файла.
-На самом деле, это просто секция с текстовым содержимом, которая сохраняется во временном файле с уникальным именем в каталоге /tmp, bash этот файл запускает и передает ему одну переменную среды с IP адресом NFS сервера (у меня один сервер для TFTP и NFS).
+This function only pretends to be bash - it's actually a hybrid. It encapsulates one language within another using EOF markers (start/end of file delimiters).  
 
-Обожаю expect, он всегда находится в ожидании текстовых сообщений от любого процесса, на который вы его направили.
+Technically, it's a text section that:  
+1. Saves to a uniquely named temporary file in `/tmp`  
+2. Gets executed by bash  
+3. Receives one environment variable: the NFS server IP (my TFTP/NFS server uses the same IP)  
 
-Здесь этим процессом является запуск терминальной сессии через последовательный порт (UART), а на другом конце и будет наш U-Boot, запуск которого мы приостановим, передадим ему ip адрес, по которому он сможет обращаться к TFTP серверу и далее запустим сетевой режим загрузки.
+I adore `expect` - it perpetually waits for text responses from any process you point it at.  
 
-Первым делом после этого U-Boot будет запрашивать загрузочную конфигурацию и в конце концов найдет ее по стандартному пути по умолчанию "pxelinux.cfg/default", ну а дальше U-Boot грузит ядро, указанное в конфигурации, грузит DTB для платы, параметры загрузки ядра у него также уже есть. После этого он передает управление ядру и его миссия на этом завершается.
+Here's the workflow:  
+1. `expect` launches a terminal session via serial port (UART)  
+2. Targets U-Boot (which we've interrupted)  
+3. Passes the IP address for TFTP server access  
+4. Initiates network boot mode  
 
-Если все прошло нормально и ядро смогло подключить сетевую файловую систему NFS, то запуститься пользовательская сессия, которую мы определим по наличию сообщения "login:" и тогда expect снова вступает в игру последний раз для того чтобы переключиться в интерактивный режим.
+U-Boot then:  
+1. Requests boot configuration via TFTP  
+2. Finds it at the standard default path `pxelinux.cfg/default`  
+3. Loads the kernel specified in the configuration  
+4. Loads the board's DTB  
+5. Passes pre-configured kernel parameters  
+6. Hands control to the kernel (mission complete)  
 
-И на этом все, можно вводить логин и пароль пользователя и работать.
+If successful:  
+1. Kernel mounts NFS root filesystem  
+2. User session starts (detected by "login:" prompt)  
+3. `expect` makes its final move: switches to interactive mode  
 
-Для сборки прошивки для платы Skif из исходного кода, можно воспользоваться функцией:
+That's it! Now you can enter username/password and work.  
+
+To build firmware for the Skif board from source, use this function:
 
 ```lua
 DOWNLOAD_DIR="$HOME/distrib"
@@ -1794,10 +1816,10 @@ build_elvees_skif_24_06() {
 }
 ```
 
-Здесь сборка дистрибутива buildroot осуществляется в докере от "Элвиса", требуется где то 4 или 5 часов, это зависит от производительности компьютера.
+Building the Buildroot distribution here uses Elvis's Docker container. The process takes about 4-5 hours, depending on your computer's performance.
 
-И наконец самая красивая кнопка у меня выглядит так:
-(конечно она не настолько красивая, как золотая, но тоже ничего)
+And finally, my most beautiful button looks like this:  
+(admittedly not as gorgeous as a golden, but decent enough)
 
 ```json
 "actionButtons": {
@@ -1820,7 +1842,7 @@ build_elvees_skif_24_06() {
 }
 ```
 
-Вместо текста на кнопки можно повесить UTF-8 красивые символы, их не так много, но поискать можно и еще есть кнопка для разработчиков:
+Instead of text labels, you can assign beautiful UTF-8 symbols to buttons. While the selection is limited, it's worth exploring. There's also a dedicated developer button:
 
 ```json
 {
@@ -1831,17 +1853,17 @@ build_elvees_skif_24_06() {
 },
 ```
 
-Общий алгоритм работы следующий:
+The general workflow is as follows:
 
-- подключается технологический кабель USB-typeC;
-- подключается сетевой кабель от хоста к одному из портов платы;
-- запускается докер (кнопка StartElveesSkif-24.06);
-- запускается сессия для U-Boot (кнопка Elvees🖲Netboot);
-- подается питание на плату.
+1. Connect the engineering USB-TypeC cable  
+2. Connect the network cable from host to one of the board's ports  
+3. Launch Docker (button: `StartElveesSkif-24.06`)  
+4. Initiate U-Boot session (button: `Elvees🖲Netboot`)  
+5. Power on the board  
 
-## Встраиваем кнопки в VSCode паровозиком
+## Embedding Buttons in VSCode as a Train Chain
 
-Кнопки я буду добавлять в плагин **«seunlanlege.action-buttons»** методом паровозика, так чтобы на всех хватило. Это когда последняя кнопка первого меню, переключает его на следующее меню, а самая последняя кнопка "MenuN" переключает на первое меню, это один из вариантов (круговой), покажу на примере:
+I'll add buttons to the **"seunlanlege.action-buttons"** plugin using a "train chain" method to accommodate all functions. This works by having the last button in Menu1 switch to Menu2, and the final button in MenuN looping back to Menu1 (circular navigation). Here's an example implementation:
 
 ```json
 "actionButtons": {
@@ -1859,7 +1881,7 @@ build_elvees_skif_24_06() {
 }
 ```
 
-А для последнего "MenuN":
+And for the final "MenuN":
 
 ```json
 ...
@@ -1871,27 +1893,21 @@ build_elvees_skif_24_06() {
 }
 ```
 
-Очень расстроился когда не нашел такую же, но только левую (это катастрофа).
-
-```dart
-символ ⮕ (U+2B95) — "Rightwards Arrow With Equilateral Arrowhead"
-```
-
-Мне круговой метод не понравился и я остановился на классическом варианте, когда видно в каком ряду кнопок мы находимся, это так:
+I didn't like the circular method and settled on the classic approach instead - where you can always see which button row is active. Here's how it looks:
 
 ```dart
     #          BUILD   ▶Load
     # Build◀   LOAD    ▶Install
-    # Build◀   INSTALL
+    # Load ◀   INSTALL
 ```
 
-Всего у меня будет три уровня меню, это файлы:
+I'll have three menu levels total, implemented as separate files:
 
 * settings.json.build
 * settings.json.load
 * settings.json.install
 
-Кнопка с заглавными буквами всегда показывает текущий уровень и еще на нее можно повесить правильное событие, для `BUILD`, это выглядит так:
+The button with capital letters always displays the current menu level, and can also trigger the appropriate action. For `BUILD`, it looks like this:
 
 ```json
 {
@@ -1902,16 +1918,17 @@ build_elvees_skif_24_06() {
 }
 ```
 
-Ну как то так, чем это удобно?
-Tем что вы можете повесить на кнопки все ваши фирменные инсталляторы и они будут всегда под рукой, можно сделать классификатор какой нибудь по группам, группам групп, все как вы любите.
+Well, that's roughly how it works. Why is this convenient?  
+Because you can assign all your proprietary installers to buttons, keeping them always at hand. You can create any classification system with groups and subgroups - everything exactly how you like it.
 
-Для установки проекта "vscode-yocto-helper" можно попробовать выполнить команду:
+To install the "vscode-yocto-helper" project, try running the command:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/berserktv/vscode-yocto-helper/refs/heads/master/install.sh | sh
 ```
 
-или так посмотреть:
+Or view it this way:
+
 ```bash
     mkdir vscode-yocto-helper
     cd vscode-yocto-helper
@@ -1919,13 +1936,10 @@ curl -fsSL https://raw.githubusercontent.com/berserktv/vscode-yocto-helper/refs/
     code .
 ```
 
-Примечание: на чистой системе установку пока не проверял.
+So in my view, the result is "Network Boots" - I hadn't used NFS before and didn't realize how powerful it is. Just one recommendation: don't expose Docker in host mode to the internet, it's not secure.
 
-Итак, на мой взгляд, то, что получилось, — это «Сетевые загрузки», NFS я до этого не использовал, не знал, что она настолько крутая. Единственное что рекомендую не выставлять докер в интернет в режиме хоста, это небезопасно.
+This article is also written for Margarita, as an example of leveraging bash capabilities for practical solutions. When you have just a few Makefiles, zero C/C++ files, only pure bash in Docker, yet want to create something valuable.
 
-Статья также написана для Маргариты, в качестве примера использования возможности bash для практического применения, когда у вас есть всего несколько Makefile файлов, нет ни одного С или С++ файла, только голый bash на Docker(е) и вы хотите сделать что то хорошее.
+## Postscript:
 
-
-## Постскриптум:
-
-Пол года бегал за всеми разработчиками своего отдела, ну прямо за всеми - за всеми двумя. Кнопку предлагал (еще виртуальную), не берут, говорят загрузка у них, не до кнопки сейчас, ну тогда она ваша. А я, а что я, а я все также сижу в полной консоли, ebash(u) на bash(e), мечтаю о **«LUA»** и собираю спецтехники.
+For half a year I chased every developer in my department - literally all two of them. I offered the button (still virtual), but they wouldn't take it. Said they're busy with boot processes, no time for buttons now. Well then, it's yours. As for me? I'm still sitting in a terminal, ebashe-ing in bashe, dreaming of **Lua** and building special-purpose images.

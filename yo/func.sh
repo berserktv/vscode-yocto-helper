@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# корневой каталог yocto, где будет располагаться каталог build, относительно текущего каталога
+# root yocto directory (where the build directory will be located), relative to the current directory
 YO_R="../.."
 CURDIR=$(pwd)
 find_setup_env() {

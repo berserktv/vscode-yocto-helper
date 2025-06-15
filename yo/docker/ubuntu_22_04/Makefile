@@ -1,7 +1,7 @@
 IMAGE = ubuntu_22_04
-# каталог для сборки образа внутри контейнера, такой же путь надо указать в файле Dockerfile см. метку WARNING
+# Build directory inside the container - must match the path in Dockerfile (see WARNING label)
 PUB   = "/mnt/data"
-# путь до корневого каталога сборки, в котором находится файл setup-environment (если не задан, то ../docker)
+# Path to root build directory containing setup-environment file (default: ../docker if not set)
 YO_R ?= $(shell dirname $(shell pwd))
 
 run:
@@ -30,7 +30,7 @@ install:
 	sudo apt-get update
 	sudo apt-get install -y docker.io
 	
-# удаление всех остановленных контейнеров, 
+# Remove all stopped containers
 clean-all-container:
 	sudo docker rm $(docker ps -qa)
 	
