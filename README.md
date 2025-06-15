@@ -46,8 +46,7 @@ code --install-extension seunlanlege.action-buttons
 Plugin settings are added to `.vscode/settings.json` and the shell script call looks like this:
 
 ```json
-   
-   ...
+...
 "actionButtons": {
     "reloadButton": null,
     "loadNpmCommands": false,
@@ -56,13 +55,13 @@ Plugin settings are added to `.vscode/settings.json` and the shell script call l
             "name": "Button-1",
             "singleInstance": true,
             "color": "#007fff",
-            "command": ".vscode/script1.sh",
+            "command": ".vscode/script1.sh"
         },
         {
             "name": "Button-N",
             "singleInstance": true,
             "color": "#ff007f",
-            "command": ".vscode/scriptN.sh",
+            "command": ".vscode/scriptN.sh"
         }
     ]
 }
@@ -217,7 +216,7 @@ Finally, after clicking the button in the VSCode status bar, select the image an
     "name": "SDcardDeploy",
     "singleInstance": true,
     "color": "#007fff",
-    "command": "cd .vscode/yo; ./sdcard_deploy.sh",
+    "command": "cd .vscode/yo; ./sdcard_deploy.sh"
 }
 ```
 
@@ -480,7 +479,7 @@ cmd_init initializes the Yocto build environment for the specified target platfo
 The `build_image.sh` script launch - triggered by a status bar button - is configured in `.vscode/settings.json` as follows:
 
 ```json
-// ...
+...
 "actionButtons": {
   "reloadButton": null,
   "loadNpmCommands": false,
@@ -1829,13 +1828,13 @@ And finally, my most beautiful button looks like this:
             "name": "StartElveesSkif-24.06",
             "singleInstance": true,
             "color": "#00008b",
-            "command": "cd .vscode/yo; source func.sh; start_elvees_skif_24_06",
+            "command": "cd .vscode/yo; source func.sh; start_elvees_skif_24_06"
         },
         {
             "name": "Elvees🖲Netboot",
             "singleInstance": true,
             "color": "#000000",
-            "command": "cd .vscode/yo; source func.sh; start_elvees_skif_netboot",
+            "command": "cd .vscode/yo; source func.sh; start_elvees_skif_netboot"
         }
     ]
 }
@@ -1848,7 +1847,7 @@ Instead of text labels, you can assign beautiful UTF-8 symbols to buttons. While
     "name": "Build🖲Elvees",
     "singleInstance": true,
     "color": "#007fff",
-    "command": "cd .vscode/yo; source func.sh; build_elvees_skif_24_06",
+    "command": "cd .vscode/yo; source func.sh; build_elvees_skif_24_06"
 },
 ```
 
@@ -1874,7 +1873,7 @@ I'll add buttons to the **"seunlanlege.action-buttons"** plugin using a "train c
       "name": "⮕ Menu2",
       "singleInstance": true,
       "color": "#000000",
-      "command": "cp -f .vscode/settings.json.Menu2 .vscode/settings.json; exit",
+      "command": "cp -f .vscode/settings.json.Menu2 .vscode/settings.json; exit"
     }
   ]
 }
@@ -1888,7 +1887,7 @@ And for the final "MenuN":
   "name": "⮕ Menu1",
   "singleInstance": true,
   "color": "#000000",
-  "command": "cp -f .vscode/settings.json.Menu1 .vscode/settings.json; exit",
+  "command": "cp -f .vscode/settings.json.Menu1 .vscode/settings.json; exit"
 }
 ```
 
@@ -1913,7 +1912,7 @@ The button with capital letters always displays the current menu level, and can 
   "name": "BUILD",
   "singleInstance": true,
   "color": "#000000",
-  "command": "cd .vscode/yo; source func.sh; DOCKER_DIR='docker/ubuntu_22_04'; start_session_docker",
+  "command": "cd .vscode/yo; source func.sh; DOCKER_DIR='docker/ubuntu_22_04'; start_session_docker"
 }
 ```
 
