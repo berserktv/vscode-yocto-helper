@@ -480,8 +480,7 @@ cmd_init initializes the Yocto build environment for the specified target platfo
 The `build_image.sh` script launch - triggered by a status bar button - is configured in `.vscode/settings.json` as follows:
 
 ```json
-
-   ...
+// ...
 "actionButtons": {
   "reloadButton": null,
   "loadNpmCommands": false,
@@ -490,13 +489,13 @@ The `build_image.sh` script launch - triggered by a status bar button - is confi
       "name": "Build",
       "singleInstance": true,
       "color": "#007fff",
-      "command": "cd .vscode/yo; source func.sh; DOCKER_DIR='docker/ubuntu_22_04' start_session_docker",
+      "command": "cd .vscode/yo; source func.sh; DOCKER_DIR='docker/ubuntu_22_04' start_session_docker"
     },
     {
       "name": "BuildImage",
       "singleInstance": true,
       "color": "#007fff",
-      "command": "cd .vscode/yo; ./build_image.sh 'bitbake core-image-minimal'",
+      "command": "cd .vscode/yo; ./build_image.sh 'bitbake core-image-minimal'"
     }
   ]
 }
@@ -1509,7 +1508,7 @@ unistall_ollama() {
 }
 ```
 
-Запуск оllama, в консоли, который можно повесить на нажатие кнопки:
+Console launch of ollama that can be assigned to a button press:
 
 ```lua
 run_deepseek() {
