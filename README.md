@@ -103,7 +103,7 @@ find_name_image() {
 }
 ```
 
-The result of the `find_name_image` function will be stored in the string variable `YO_IMAGE_NAME`, with the names of found images separated by spaces.
+The result of the `find_name_image()` function will be stored in the string variable `YO_IMAGE_NAME`, with the names of found images separated by spaces.
 
 Next, I need to locate the SD card connected via USB or card reader. A highly convenient table-formatted output is generated, allowing me to verify that exactly the correct device is selected. This is critical because after flashing with the dd command, all existing data is erased - making accuracy essential here.
 
@@ -398,9 +398,9 @@ The `IMAGE` variable specifies the primary name for launching the container.
 Additionally, to run Docker in the foreground (instead of background), remove the "-d" option and add "-i". This starts the container in interactive mode, allowing direct command input in its running shell. The Makefile separates these modes:
 
 - make run: Interactive mode with Yocto initialization (executes setup-environment);
-- make run_detach: Background container launch. To connect to an already running container for executing a single   
-  bitbake command, each start creates a shell session initialized with setup-environment, 
-  followed by execution of the user command.
+- make run_detach: Background container launch. To connect to an already running 
+  container for executing a single bitbake command, each start creates a shell 
+  session initialized with setup-environment, followed by execution of the user command.
 
 Next, to work with this Makefile, I need to add a function to `.vscode/yo/func.sh` that finds the ID of the running Docker container:
 
@@ -445,7 +445,7 @@ start_cmd_docker() {
 }
 ```
 
-Where the first argument can be a command or list of commands separated by ";". 
+Where the first argument can be a command or list of commands separated by ";" 
 The key requirement is that the `DOCKER_DIR` variable contains the correct path to the Docker Makefile directory.
 
 The `start_cmd_docker` function first searches for the container hash ID by name (visible in the Makefile, see IMAGE=ubuntu_22_04). If the container isn't running, it starts in background mode (make run_detach), then connects via docker exec to launch a new bash process. Within this process, the commands passed as the first argument `$cmd_args` are executed.
@@ -626,7 +626,7 @@ If you make no changes to the image, getty won't associate with /dev/ttyAMA0. To
   # the layer configuration file in local.conf
 ```
 
-Note: overall, this approach proves quite inconvenient - specifically rebuilding core-image-minimal just for QEMU VM execution. However, you can dynamically modify /etc/inittab within `core-image-minimal.wic`: First mount it using `mount_raw_image` (see below), adjust the configuration, save changes, then call `umount_raw_image`
+Note: overall, this approach proves quite inconvenient - specifically rebuilding core-image-minimal just for QEMU VM execution. However, you can dynamically modify /etc/inittab within `core-image-minimal.wic`: First mount it using `mount_raw_image()` (see below), adjust the configuration, save changes, then call `umount_raw_image()`
 
 
 ## Using the Baron Munchausen Method for Bash Self-Documentation
@@ -651,7 +651,7 @@ example_bash_function2() {
     echo "example_bash_function2"
 }
 
-# Example bash function 3, excluded from interface description
+#Example bash function 3, excluded from interface description
 example_bash_function3() {
     echo "example_bash_function3"
 }
@@ -665,13 +665,13 @@ you immediately see all available script interfaces.
 
 To include a function in this documentation, simply add a comment line immediately before the function declaration. The comment must: 
 
-- begin at the start of the line
-- contain a space after the # symbol
+- Begin at the start of the line
+- Contain a space after the # symbol
 
 To exclude a function from documentation, omit the space after # in its preceding comment. Comments inside bash functions won't appear in the help output because they:
 
-- don't start at the beginning of the line
-- are indented by at least 4 spaces (assuming proper script formatting)
+- Don't start at the beginning of the line
+- Are indented by at least 4 spaces (assuming proper script formatting)
 
 How it works:
 
@@ -793,9 +793,9 @@ The primary Linux utility for this is losetup. Different filesystem types may re
 
 The function requires three environment variables as parameters:
 
-`IMAGE_NAME` - image filename
-`IMAGE_DIR`  - directory containing the image file
-`MOUNT_DIR`  - mount target directory
+**`IMAGE_NAME`** - image filename
+**`IMAGE_DIR`**  - directory containing the image file
+**`MOUNT_DIR`**  - mount target directory
 
 Note: This implementation additionally utilizes the `get_mount_base()` function:
 
@@ -1347,8 +1347,8 @@ set_env_raw_rpi4() {
 ```
 
 The `find_name_image()` function checks if there are any suitable images available. If images exist, you'll be presented with a numbered list (1 to N) in the console. If you select an archived image:
-- it will be unpacked;
-- environment variables will be configured for potential loading via `mount_raw_image()`.
+- It will be unpacked;
+- Environment variables will be configured for potential loading via `mount_raw_image()`.
 
 I also have a cleanup function that restores the image's `config.txt` and `cmdline.txt` files to their original state. This is useful if you later decide to flash the image to an SD card using `dd` after manipulations - you never know what might happen.
 
@@ -1566,8 +1566,8 @@ mount_raw_ubuntu() {
 ```
 
 The process here is similar to **`mount_raw_rpi4`**, with one key difference: I can't write directly to the ISO. Instead, I need to prepare:
-- a boot menu
-- initial firmware (bootloader) for the network card: **`pxelinux.0`** in the TFTP server root
+- A boot menu
+- Initial firmware (bootloader) for the network card: **`pxelinux.0`** in the TFTP server root
 
 This bootloader is extracted from a separate `netboot.tar.gz` archive, which contains everything needed to display the boot menu.
 
@@ -1691,7 +1691,7 @@ Next, the process is straightforward:
 - Unpack the root filesystem at `/tmp/docker/nfs` as root
 
 ⚠️ Critical: File permissions must be preserved during extraction (as root ownership), otherwise:
-  - systemd in the NFS-loaded rootfs will fail
+  - "systemd" in the NFS-loaded rootfs will fail
   - Numerous components will break
   - Process permissions must be strictly maintained - no exceptions!
 
@@ -1936,7 +1936,7 @@ Or view it this way:
 
 So in my view, the result is "Network Boots" - I hadn't used NFS before and didn't realize how powerful it is. Just one recommendation: don't expose Docker in host mode to the internet, it's not secure.
 
-This article is also written for Margarita, as an example of leveraging bash capabilities for practical solutions. When you have just a few Makefiles, zero C/C++ files, only pure bash in Docker, yet want to create something valuable.
+This article is also written for **Margarita**, as an example of leveraging bash capabilities for practical solutions. When you have just a few Makefiles, zero C/C++ files, only pure bash in Docker, yet want to create something valuable.
 
 ## Postscript:
 
