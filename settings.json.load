@@ -27,55 +27,55 @@
                 "name": "RunDeepSeek",
                 "singleInstance": true,
                 "color": "#00008b",
-                "command": "cd .vscode/yo; source func.sh; run_deepseek",
+                "command": "cd .vscode/yo; source func.sh; run_deepseek"
             },
             {
                 "name": "StartUbuntu-22.04",
                 "singleInstance": true,
                 "color": "#00008b",
-                "command": "cd .vscode/yo; source func.sh; start_ubuntu_22_04",
+                "command": "cd .vscode/yo; source func.sh; start_ubuntu_22_04"
             },
             {
                 "name": "StartRaspbian-2024-11",
                 "singleInstance": true,
                 "color": "#00008b",
-                "command": "cd .vscode/yo; source func.sh; start_netboot_raspios",
+                "command": "cd .vscode/yo; source func.sh; start_netboot_raspios"
             },
             {
                 "name": "StartNetbootDemoRpi4",
                 "singleInstance": true,
                 "color": "#00008b",
-                "command": "cd .vscode/yo; source func.sh; start_netboot_rpi4",
+                "command": "cd .vscode/yo; source func.sh; start_netboot_rpi4"
             },
             {
                 "name": "StartElveesSkif-24.06",
                 "singleInstance": true,
                 "color": "#00008b",
-                "command": "cd .vscode/yo; source func.sh; start_elvees_skif_24_06",
+                "command": "cd .vscode/yo; source func.sh; start_elvees_skif_24_06"
             },
             {
                 "name": "Elvees🖲Netboot",
                 "singleInstance": true,
                 "color": "#000000",
-                "command": "cd .vscode/yo; source func.sh; start_elvees_skif_netboot",
+                "command": "cd .vscode/yo; source func.sh; start_elvees_skif_netboot"
             },
             {
                 "name": "Build ◀",
                 "singleInstance": true,
                 "color": "#000000",
-                "command": "cp -f .vscode/settings.json.build .vscode/settings.json; exit",
+                "command": "cp -f .vscode/settings.json.build .vscode/settings.json; exit"
             },
             {
                 "name": "LOAD",
                 "singleInstance": true,
                 "color": "#000000",
-                "command": "bash",
+                "command": "bash"
             },
             {
                 "name": "▶ Install",
                 "singleInstance": true,
                 "color": "#000000",
-                "command": "cp -f .vscode/settings.json.install .vscode/settings.json; exit",
+                "command": "cp -f .vscode/settings.json.install .vscode/settings.json; exit"
             }
 
         ]

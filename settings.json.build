@@ -27,7 +27,7 @@
                 "name": "core-image-minimal",
                 "singleInstance": true,
                 "color": "#0000ff",
-                "command": "cd .vscode/yo; ./build_image.sh 'bitbake core-image-minimal'",
+                "command": "cd .vscode/yo; ./build_image.sh 'bitbake core-image-minimal'"
             },
             {
                 "name": "SDcardDeploy",
@@ -39,37 +39,37 @@
                 "name": "core-image-sato",
                 "singleInstance": true,
                 "color": "#0000ff",
-                "command": "cd .vscode/yo; ./build_image.sh 'bitbake core-image-sato'",
+                "command": "cd .vscode/yo; ./build_image.sh 'bitbake core-image-sato'"
             },
             {
                 "name": "Build🖲Elvees",
                 "singleInstance": true,
                 "color": "#007fff",
-                "command": "cd .vscode/yo; source func.sh; build_elvees_skif_24_06",
+                "command": "cd .vscode/yo; source func.sh; build_elvees_skif_24_06"
             },
             {
                 "name": "Uart",
                 "singleInstance": true,
                 "color": "#0000ff",
-                "command": "sudo picocom --baud 115200 /dev/ttyUSB0",
+                "command": "sudo picocom --baud 115200 /dev/ttyUSB0"
             },
             {
                 "name": "YoctoAnalyzeDeepseek",
                 "singleInstance": true,
                 "color": "#007fff",
-                "command": "cd .vscode/yo; source func.sh; yocto_analyze_deepseek_rus 'bitbake core-image-minimal'",
+                "command": "cd .vscode/yo; source func.sh; yocto_analyze_deepseek_rus 'bitbake core-image-minimal'"
             },
             {
                 "name": "BUILD",
                 "singleInstance": true,
                 "color": "#000000",
-                "command": "cd .vscode/yo; source func.sh; DOCKER_DIR='docker/ubuntu_22_04'; start_session_docker",
+                "command": "cd .vscode/yo; source func.sh; DOCKER_DIR='docker/ubuntu_22_04'; start_session_docker"
             },
             {
                 "name": "▶ Load",
                 "singleInstance": true,
                 "color": "#000000",
-                "command": "cp -f .vscode/settings.json.load .vscode/settings.json; exit",
+                "command": "cp -f .vscode/settings.json.load .vscode/settings.json; exit"
             }
         ]
     }

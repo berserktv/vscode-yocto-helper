@@ -27,25 +27,25 @@
                 "name": "YoctoDemoMinimal",
                 "singleInstance": true,
                 "color": "#ffffff",
-                "command": "cd .vscode/yo; source func.sh; example_yocto_demo_minimal_rpi4",
+                "command": "cd .vscode/yo; source func.sh; example_yocto_demo_minimal_rpi4"
             },
             {
                 "name": "InstallDeepSeek",
                 "singleInstance": true,
                 "color": "#ffffff",
-                "command": "cd .vscode/yo; source func.sh; install_deepseek",
+                "command": "cd .vscode/yo; source func.sh; install_deepseek"
             },
             {
                 "name": "Load ◀",
                 "singleInstance": true,
                 "color": "#ffffff",
-                "command": "cp -f .vscode/settings.json.load .vscode/settings.json; exit",
+                "command": "cp -f .vscode/settings.json.load .vscode/settings.json; exit"
             },
             {
                 "name": "INSTALL",
                 "singleInstance": true,
                 "color": "#ffffff",
-                "command": "bash",
+                "command": "bash"
             }
         ]
     }
