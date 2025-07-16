@@ -36,7 +36,7 @@
                 "command": "cd .vscode/yo; source func.sh; start_ubuntu_22_04"
             },
             {
-                "name": "StartRaspbian-2024-11",
+                "name": "StartRaspbian-2025-05",
                 "singleInstance": true,
                 "color": "#00008b",
                 "command": "cd .vscode/yo; source func.sh; start_netboot_raspios"
