@@ -3,6 +3,10 @@ FROM debian:buster-slim
 ENV DEBIAN_FRONTEND noninteractive
 ENV DEBCONF_NONINTERACTIVE_SEEN true
 
+# fixes broken package sources post-Buster-EOL
+RUN sed -i 's|http://deb.debian.org|http://archive.debian.org|g' /etc/apt/sources.list && \
+    sed -i 's|http://security.debian.org|http://archive.debian.org/debian-security|g' /etc/apt/sources.list
+
 RUN apt-get update && \
     apt-get install --no-install-recommends -y \
         lsof procps net-tools \
