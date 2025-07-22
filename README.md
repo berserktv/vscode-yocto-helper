@@ -38,7 +38,7 @@ First of all, you need to install both VSCode itself (if you don't have it insta
 
 
 ```bash
-sudo apt install -y snap
+sudo apt install -y snap || sudo apt install -y snapd
 sudo snap install --classic code
 code --install-extension seunlanlege.action-buttons
 ```
