@@ -23,13 +23,6 @@ if [ "$flag" = "yes" ]; then
     sudo groupdel docker
 fi
 
-read -p "Removing development tools: expect git picocom make? (yes/no):" flag
-if [ "$flag" = "yes" ]; then
-    echo "sudo apt-get purge -y expect picocom git make"
-    sudo apt-get purge -y expect picocom git make
-    sudo gpasswd -d "${USER}" dialout
-fi
-
 read -p "Removing VSCode? (yes/no):" flag
 if [ "$flag" = "yes" ]; then
     echo "sudo snap remove code"
