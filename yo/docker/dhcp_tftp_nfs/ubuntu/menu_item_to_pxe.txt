@@ -1,4 +1,0 @@
-label ubuntu
-  menu label ^IMAGE_NAME
-  kernel IMAGE_NAME/vmlinuz
-  append initrd=IMAGE_NAME/initrd root=/dev/nfs netboot=nfs nfsroot=NFS_IP_ADDRESS:/nfs ip=dhcp nomodeset
