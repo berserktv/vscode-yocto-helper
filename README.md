@@ -1,4 +1,4 @@
-# Boot Raspbian over the network for the Raspberry Pi 4 board
+# Boot Raspbian over the network for the RPi 4 board
 
 ![](https://habrastorage.org/webt/0m/6i/xw/0m6ixw8xy0_7wdkr1xw1smlfui0.png)
 
