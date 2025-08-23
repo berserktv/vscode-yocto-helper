@@ -281,12 +281,6 @@ create_mount_point_for_docker() {
     if [ $? -eq 0 ]; then echo "create: ln -s $2 ${symlink_mount_dir}"; fi
 }
 
-start_netboot_rpi4() {
-    DOCKER_DIR='docker/dhcp_tftp_nfs'
-    stop_docker "dhcp_tftp_nfs:buster-slim"
-    mount_raw_rpi4 && start_session_docker
-}
-
 set_env_raw_raspios() {
     IMAGE_DIR="${DOWNLOAD_RASPIOS}"
     #IMAGE_NAME="2024-11-19-raspios-bookworm-arm64.img"
