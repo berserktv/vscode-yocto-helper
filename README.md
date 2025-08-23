@@ -9,7 +9,6 @@
 - Selecting and configuring a VSCode plugin
 - Dishing Out Buster Slim for an Ultimate Docker Breakdown
 - Configuring DHCP, TFTP, and NFS servers
-- Network-booting a core-image-minimal (wic) image on RPi4
 - Network-booting Raspbian for Raspberry Pi 4
 
 
