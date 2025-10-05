@@ -24,7 +24,7 @@
         "loadNpmCommands": false,
         "commands": [
             {
-                "name": "StartRaspbian-2025-05",
+                "name": "StartRaspbian-2025-10",
                 "singleInstance": true,
                 "color": "#00008b",
                 "command": "cd .vscode/yo; source func.sh; start_netboot_raspios"

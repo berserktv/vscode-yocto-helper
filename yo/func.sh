@@ -284,7 +284,8 @@ create_mount_point_for_docker() {
 set_env_raw_raspios() {
     IMAGE_DIR="${DOWNLOAD_RASPIOS}"
     #IMAGE_NAME="2024-11-19-raspios-bookworm-arm64.img"
-    IMAGE_NAME="2025-05-13-raspios-bookworm-arm64.img"
+    #IMAGE_NAME="2025-05-13-raspios-bookworm-arm64.img"
+    IMAGE_NAME="2025-10-01-raspios-trixie-arm64.img"
     MOUNT_DIR="${DOWNLOAD_RASPIOS}/tmp_mount"
     DOCKER_DIR='docker/dhcp_tftp_nfs'
 }
