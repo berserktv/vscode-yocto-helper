@@ -23,6 +23,12 @@ if [ "$flag" = "yes" ]; then
     sudo groupdel docker
 fi
 
+read -p "Removing development tools: binfmt-support qemu-user-static qemu-utils? (yes/no):" flag
+if [ "$flag" = "yes" ]; then
+    echo "sudo apt-get purge -y binfmt-support qemu-user-static qemu-utils"
+    sudo apt-get purge -y binfmt-support qemu-user-static qemu-utils
+fi
+
 read -p "Removing VSCode? (yes/no):" flag
 if [ "$flag" = "yes" ]; then
     echo "sudo snap remove code"

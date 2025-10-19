@@ -33,7 +33,19 @@
                 "name": "RestoreImageRaspbian",
                 "singleInstance": true,
                 "color": "#00008b",
-                "command": "cd .vscode/yo; source func.sh; restore_image_raspios"
+                "command": "cd .vscode/yo; source func.sh; set_env_raw_raspios; restore_image_raspios"
+            },
+            {
+                "name": "Raspbian-2022-04-CustomGames",
+                "singleInstance": true,
+                "color": "#00008b",
+                "command": "cd .vscode/yo; source func.sh; start_netboot_raspios_22_04_custom_games"
+            },
+            {
+                "name": "RestoreCustomGames",
+                "singleInstance": true,
+                "color": "#00008b",
+                "command": "cd .vscode/yo; source func.sh; IMAGE_NAME=2022-04-04-raspios-bullseye-arm64-CustomGames.img; restore_image_raspios"
             },
             {
                 "name": "LOAD",

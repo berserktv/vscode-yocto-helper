@@ -7,7 +7,7 @@ sudo snap install --classic code
 code --install-extension seunlanlege.action-buttons
 
 sudo apt-get update
-sudo apt install -y docker.io
+sudo apt install -y docker.io binfmt-support qemu-user-static qemu-utils
 
 sudo usermod -aG docker $USER
 

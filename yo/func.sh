@@ -1,16 +1,17 @@
 #!/bin/bash
 
 CURDIR=$(pwd)
-DOCKER_DIR=""
+DOCKER_DIR='docker/dhcp_tftp_nfs'
 DOCKER_DIR_MOUNT="/tmp/docker"
 DOCKER_DHCP_TFTP="docker/dhcp_tftp_nfs"
 IP_TFTP="10.0.7.1"
 IMAGE_NAME=""
-IMAGE_DIR=""
-IMAGE_SEL=""
-MOUNT_DIR=""
+IMAGE_RASPIOS_URL=""
 DOWNLOAD_DIR="$HOME/distrib"
 DOWNLOAD_RASPIOS="${DOWNLOAD_DIR}/raspios"
+MOUNT_DIR="${DOWNLOAD_RASPIOS}/tmp_mount"
+IMAGE_DIR="${DOWNLOAD_RASPIOS}"
+
 CMDLINE_RPI4="docker/dhcp_tftp_nfs/rpi/cmdline.txt"
 ENABLE_UART_RPI4="docker/dhcp_tftp_nfs/rpi/enable_uart.txt"
 # Repository of this project: https://github.com/berserktv/vscode-yocto-helper
@@ -97,7 +98,7 @@ umount_raw_image() {
     get_mount_base
     local name_without_ext="${IMAGE_NAME%.*}"
     if [ ! -d ${MOUNT_BASE_DIR} ]; then
-        echo "Error: ${MOUNT_BASE_DIR} not found, exiting ..." >&2; return 2
+        echo "Error: dir => ${MOUNT_BASE_DIR} not found, exiting ..." >&2; return 2
     fi
 
     local mounted_parts=("${MOUNT_BASE_DIR}"/part*)
@@ -147,7 +148,7 @@ download_files() {
     return $count_error
 }
 
-download_raspios() {
+download_raspios_last() {
     # arg1 - select version
     mkdir -p "${DOWNLOAD_RASPIOS}"
     local url="https://downloads.raspberrypi.com/raspios_arm64/images/"
@@ -187,7 +188,23 @@ download_raspios() {
 
     local downloaded_file="${DOWNLOAD_RASPIOS}/${selected_file}"
     echo "Extracting XZ archive..."
-    xz -d "$downloaded_file"
+    xz -dk "$downloaded_file" && sync
+}
+
+download_raspios() {
+    if [ -z "${IMAGE_NAME}" ]; then echo "Error: Set environment variables IMAGE_NAME, exit"; return 1; fi
+    mkdir -p "${IMAGE_DIR}"
+    local img="${IMAGE_DIR}/${IMAGE_NAME}"
+    [[ -f "${img}" ]] && { echo "File already exists: ${img}, skipping ..."; return 0; }
+
+    if download_files "${IMAGE_DIR}" "${IMAGE_RASPIOS_URL}" "${IMAGE_NAME}.xz"; then
+        if [ ! -f "${IMAGE_DIR}/${IMAGE_NAME}" ]; then
+            echo "Extracting XZ archive..."
+            xz -dk "${img}.xz" && sync
+        fi
+    fi
+
+    return $?
 }
 
 add_lines_to_config_txt() {
@@ -275,19 +292,22 @@ create_mount_point_for_docker() {
         *)      echo "Invalid argument: $2. Allowed: 'tftp' or 'nfs'"; return 4 ;;
     esac
     mkdir -p "${DOCKER_DIR_MOUNT}"
-    clean_tmp_mount_dir "${symlink_mount_dir}"
+    [[ -L "${symlink_mount_dir}" ]] && rm "${symlink_mount_dir}"
 
     ln -s "$2" "${symlink_mount_dir}"
     if [ $? -eq 0 ]; then echo "create: ln -s $2 ${symlink_mount_dir}"; fi
 }
 
 set_env_raw_raspios() {
-    IMAGE_DIR="${DOWNLOAD_RASPIOS}"
     #IMAGE_NAME="2024-11-19-raspios-bookworm-arm64.img"
     #IMAGE_NAME="2025-05-13-raspios-bookworm-arm64.img"
     IMAGE_NAME="2025-10-01-raspios-trixie-arm64.img"
-    MOUNT_DIR="${DOWNLOAD_RASPIOS}/tmp_mount"
-    DOCKER_DIR='docker/dhcp_tftp_nfs'
+    IMAGE_RASPIOS_URL="https://downloads.raspberrypi.org/raspios_arm64/images/raspios_arm64-2025-10-02"
+}
+
+set_env_raw_raspios_22_04() {
+    IMAGE_NAME="2022-04-04-raspios-bullseye-arm64.img"
+    IMAGE_RASPIOS_URL="https://downloads.raspberrypi.org/raspios_arm64/images/raspios_arm64-2022-04-07"
 }
 
 stop_docker() {
@@ -315,7 +335,6 @@ restore_orig() {
 }
 
 restore_image_raspios() {
-    set_env_raw_raspios
     mount_raw_image
     local mount_dir="${MOUNT_BASE_DIR}/part1"
     for file in config.txt cmdline.txt; do
@@ -342,3 +361,167 @@ start_netboot_raspios() {
     mount_raw_raspios && start_session_docker
 }
 
+start_netboot_raspios_22_04() {
+    set_env_raw_raspios_22_04
+    stop_docker "dhcp_tftp_nfs:buster-slim"
+    mount_raw_raspios && start_session_docker
+}
+
+clone_image_raspios() {
+    [[ -n "$1" ]] || { echo "arg1: source not set"; return 1; }
+    [[ -n "$2" ]] || { echo "arg2: target not set"; return 2; }
+    [[ -f "${IMAGE_DIR}/$2" ]] && { echo "target image exists: => $2, сloning not performed, skipping ..."; return 3; }
+    local src="$1"
+    local target="$2"
+
+    umount_raw_image
+    download_raspios || return 4
+    if [[ -f "${IMAGE_DIR}/${src}" && ! -f "${IMAGE_DIR}/${target}" ]]; then
+        mv "${IMAGE_DIR}/${src}" "${IMAGE_DIR}/${target}" && sync
+        IMAGE_NAME="${target}"
+        resize_image_raspios && { echo "Cloned: ${src} => ${target}"; return 0; }
+    fi
+
+    echo "Error: clone failed ${src} => ${target}"
+    return 5
+}
+
+start_netboot_raspios_22_04_custom_games() {
+    set_env_raw_raspios_22_04
+    local img_name="2022-04-04-raspios-bullseye-arm64-CustomGames.img"
+    if clone_image_raspios "${IMAGE_NAME}" "${img_name}"; then
+        qemu_install_in_raspios_games
+    fi
+
+    IMAGE_NAME="${img_name}"
+    stop_docker "dhcp_tftp_nfs:buster-slim"
+    mount_raw_raspios && start_session_docker
+}
+
+TARGET_SIZE_BYTES=$((5 * 1024 * 1024 * 1024))
+check_raw_image_size_from_resize() {
+    #example arg2 => TARGET_SIZE_BYTES=$((8 * 1024 * 1024 * 1024))
+    [[ -f "$1" ]] || { echo "Image file arg1 not found. Specify the full path => $1"; return 1; }
+    [[ -z "$2" ]] && { echo "File size not specified for arg2 (bytes), example  8589934592"; return 2; }
+    local path_file="$1"
+    local new_size="$2"
+
+    CURRENT_SIZE_BYTES=$(stat -c%s "${path_file}" 2>/dev/null)
+    if [ "$new_size" -gt "$CURRENT_SIZE_BYTES" ]; then return 0;
+    else return 3; fi
+}
+
+resize_image_raspios() {
+    umount_raw_image
+    local img="${IMAGE_DIR}/${IMAGE_NAME}"
+    if check_raw_image_size_from_resize "${img}" "${TARGET_SIZE_BYTES}"; then
+        echo "qemu-img resize -f raw ${img} ${TARGET_SIZE_BYTES}"
+        qemu-img resize -f raw "${img}" "${TARGET_SIZE_BYTES}"
+    else
+        echo "Image resizing ${img} is not required" && return 1
+    fi
+
+    echo "sudo losetup -f --show -P ${img}"
+    LOOP_DEV=$(sudo losetup -f --show -P "${img}")
+
+    if [ ! -b "${LOOP_DEV}p2" ]; then
+        Error: partition ${LOOP_DEV}p2 does not exist!
+        echo "sudo losetup -d $LOOP_DEV"
+        sudo losetup -d "$LOOP_DEV"
+        return 2
+    fi
+
+    echo "sudo parted --script $LOOP_DEV resizepart 2 100%"
+    sudo parted --script "$LOOP_DEV" resizepart 2 100%
+
+    echo "sudo resize2fs -f ${LOOP_DEV}p2"
+    sudo resize2fs -f "${LOOP_DEV}p2" && sync
+    sudo losetup -d "$LOOP_DEV"
+    return 0
+}
+
+raspios_create_user() {
+sudo chroot "${MOUNT_BASE_DIR}/part2" /bin/bash <<'EOF'
+    useradd -m -s /bin/bash -G sudo,adm,cdrom,audio,video,plugdev,games,users pi
+    echo "pi:raspberry" | chpasswd
+    cat /etc/passwd | grep pi
+EOF
+}
+
+configure_raspios_firstboot() {
+sudo chroot "${MOUNT_BASE_DIR}/part2" /bin/bash <<'EOF'
+    apt-get update
+
+    # removing the first run setup wizard
+    echo "FIRST_BOOT=NO" > /etc/default/raspi-config
+    mv /etc/xdg/autostart/piwiz.desktop /etc/xdg/autostart/piwiz.desktop.off
+    mkdir -p /etc/piwiz
+    echo "COMPLETED=1" > /etc/piwiz/complete
+    if ! grep -q "autologin-user=pi" /etc/lightdm/lightdm.conf; then
+        sed -i '/\[Seat:\*\]/a autologin-user=pi' /etc/lightdm/lightdm.conf
+        sed -i 's/^autologin-user=rpi-first-boot-wizard/#&/' /etc/lightdm/lightdm.conf
+    fi
+    systemctl disable userconfig.service
+    systemctl mask userconfig.service
+
+    echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
+    locale-gen
+    update-locale LANG=en_US.UTF-8 LANGUAGE=en_US.UTF-8 LC_ALL=en_US.UTF-8
+    echo "Europe/Moscow" > /etc/timezone
+    dpkg-reconfigure -f noninteractive tzdata
+
+    sed -i 's/XKBMODEL=".*"/XKBMODEL="pc105"/' /etc/default/keyboard
+    sed -i 's/XKBLAYOUT=".*"/XKBLAYOUT="us"/' /etc/default/keyboard
+    sed -i 's/XKBVARIANT=".*"/XKBVARIANT=""/' /etc/default/keyboard
+    dpkg-reconfigure -f noninteractive keyboard-configuration
+EOF
+}
+
+raspios_install_mc() {
+sudo chroot "${MOUNT_BASE_DIR}/part2" /bin/bash <<'EOF'
+    apt-get install -y mc
+EOF
+}
+
+raspios_install_doom() {
+sudo chroot "${MOUNT_BASE_DIR}/part2" /bin/bash <<'EOF'
+    echo "Doom Install"
+    apt-get install -y chocolate-doom freedoom
+EOF
+}
+
+raspios_install_quake3() {
+    sudo mkdir -p "${MOUNT_BASE_DIR}/part2/proc"
+    sudo mount -t proc none "${MOUNT_BASE_DIR}/part2/proc"
+
+sudo chroot "${MOUNT_BASE_DIR}/part2" /bin/bash <<'EOF'
+    echo "Quake 3 Install"
+    grep -q "nameserver 8.8.8.8" /etc/resolv.conf || echo "nameserver 8.8.8.8" >> /etc/resolv.conf
+    apt-get install -y quake3 game-data-packager innoextract
+    mkdir -p /tmp/quake3-data
+    /usr/games/game-data-packager -n -d /tmp/quake3-data quake3 --no-search --download && sync
+
+    if [ -f /tmp/quake3-data/quake3-data_*.deb ]; then
+        dpkg -i /tmp/quake3-data/quake3-data_*.deb
+    elif [ -f /tmp/quake3-data/quake3-demo-data_*.deb ]; then
+        dpkg -i /tmp/quake3-data/quake3-demo-data_*.deb
+    else
+        echo "Error: Data package not generated"
+    fi
+EOF
+
+    sudo umount "${MOUNT_BASE_DIR}/part2/proc" 2>/dev/null || true
+}
+
+qemu_install_in_raspios_games() {
+    mount_raw_image
+    if [ ! -f ${MOUNT_BASE_DIR}/part2/usr/bin/qemu-arm-static ]; then
+        echo "sudo cp /usr/bin/qemu-arm-static ${MOUNT_BASE_DIR}/part2/usr/bin"
+        sudo cp /usr/bin/qemu-arm-static ${MOUNT_BASE_DIR}/part2/usr/bin
+    fi
+    raspios_create_user
+    configure_raspios_firstboot
+    raspios_install_mc
+    raspios_install_doom
+    raspios_install_quake3
+}
